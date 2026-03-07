@@ -252,7 +252,7 @@
     </div>
 
     <script>
-        const apiBase = 'https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/';
+        const apiBase = '/.netlify/functions/api-proxy';
 
         // Global state
         let operacoes = [];
@@ -279,10 +279,10 @@
         }
 
         function carregarCategorias() {
-            return fetch(apiBase + 'pkg_categorias/LISTAR_CATEGORIAS_P', {
+            return fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ p_nome: '', p_sub: '' })
+                body: JSON.stringify({ p_nome: '', p_sub: '', endpoint: 'pkg_categorias/LISTAR_CATEGORIAS_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -298,10 +298,10 @@
         }
 
         function carregarUsuarios() {
-            return fetch(apiBase + 'pkg_usuarios/LISTAR_USUARIOS_P', {
+            return fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({ endpoint: 'pkg_usuarios/LISTAR_USUARIOS_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -313,10 +313,10 @@
         }
 
         function carregarOperadores() {
-            return fetch(apiBase + 'pkg_operadoras/LISTAR_OPERADORAS_P', {
+            return fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({ endpoint: 'pkg_operadoras/LISTAR_OPERADORAS_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -376,10 +376,10 @@
             document.getElementById('spinnerBuscar').classList.remove('d-none');
             document.getElementById('btnBuscarTexto').classList.add('d-none');
 
-            fetch(apiBase + 'pkg_operacoes/LISTAR_OPERACOES_P', {
+            fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({ ...body, endpoint: 'pkg_operacoes/LISTAR_OPERACOES_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -519,10 +519,10 @@
                 p_tp_responsavel: campo === 'responsavel' ? valor : null
             };
 
-            fetch(apiBase + 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P', {
+            fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({ ...body, endpoint: 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -602,10 +602,10 @@
             document.getElementById('spinnerSalvar').classList.remove('d-none');
             document.getElementById('btnSalvarTexto').classList.add('d-none');
 
-            fetch(apiBase + 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P', {
+            fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({ ...body, endpoint: 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -686,10 +686,10 @@
                 return;
             }
 
-            fetch(apiBase + 'pkg_operacoes/REMOVER_OPERACAO_P', {
+            fetch(apiBase, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ p_id: id })
+                body: JSON.stringify({ p_id: id, endpoint: 'pkg_operacoes/REMOVER_OPERACAO_P' })
             })
             .then(res => res.json())
             .then(data => {
@@ -717,10 +717,10 @@
             }
 
             const promises = Array.from(selectedRows).map(id =>
-                fetch(apiBase + 'pkg_operacoes/REMOVER_OPERACAO_P', {
+                fetch(apiBase, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ p_id: id })
+                    body: JSON.stringify({ p_id: id, endpoint: 'pkg_operacoes/REMOVER_OPERACAO_P' })
                 }).then(r => r.json())
             );
 

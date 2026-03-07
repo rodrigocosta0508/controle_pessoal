@@ -105,7 +105,7 @@
   </div>
 
   <script>
-    const apiBase = 'https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/pkg_categorias/';
+    const apiBase = '/.netlify/functions/api-proxy';
 
     document.getElementById('formCriar').addEventListener('submit', function (e) {
       e.preventDefault();
@@ -125,10 +125,10 @@
       const sub = document.getElementById('nomeSubCategoria').value.trim();
       document.getElementById('spinnerCriar').classList.remove('d-none');
       document.getElementById('btnTextCriar').classList.add('d-none');
-      fetch(apiBase + 'CRIAR_CATEGORIA_P', {
+      fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_nome: nome, p_sub: sub })
+        body: JSON.stringify({ p_nome: nome, p_sub: sub, endpoint: 'pkg_categorias/CRIAR_CATEGORIA_P' })
       })
         .then(res => res.json())
         .then(data => {
@@ -148,9 +148,9 @@
 
     function listarCategorias() {
       document.getElementById('spinnerListar').classList.remove('d-none');
-      fetch(apiBase + 'LISTAR_CATEGORIAS_P', {
+      fetch(apiBase, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_nome: '', p_sub: '' })
+        body: JSON.stringify({ p_nome: '', p_sub: '', endpoint: 'pkg_categorias/LISTAR_CATEGORIAS_P' })
       })
         .then(res => res.json())
         .then(data => {
@@ -206,9 +206,9 @@
 
       document.getElementById('spinnerAlterar').classList.remove('d-none');
       document.getElementById('btnTextAlterar').classList.add('d-none');
-      fetch(apiBase + 'ALTERAR_CATEGORIA_P', {
+      fetch(apiBase, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_id: id, p_nm: novoCat, p_sub: novoSub })
+        body: JSON.stringify({ p_id: id, p_nm: novoCat, p_sub: novoSub, endpoint: 'pkg_categorias/ALTERAR_CATEGORIA_P' })
       })
         .then(res => res.json())
         .then(data => {
@@ -229,9 +229,9 @@
 
       document.getElementById('spinnerRemover').classList.remove('d-none');
       document.getElementById('btnTextRemover').classList.add('d-none');
-      fetch(apiBase + 'REMOVER_CATEGORIA_P', {
+      fetch(apiBase, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_id: id })
+        body: JSON.stringify({ p_id: id, endpoint: 'pkg_categorias/REMOVER_CATEGORIA_P' })
       })
         .then(res => res.json())
         .then(data => {

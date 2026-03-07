@@ -76,7 +76,7 @@
   </form>
 
   <script>
-    const apiBase = 'https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/';
+    const apiBase = '/.netlify/functions/api-proxy';
     let categorias = [];
 
     document.getElementById('formOperacao').addEventListener('submit', function (e) {
@@ -93,10 +93,10 @@
     }
 
     function carregarCategorias() {
-      fetch(apiBase + 'pkg_categorias/LISTAR_CATEGORIAS_P', {
+      fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_nome: '', p_sub: '' })
+        body: JSON.stringify({ p_nome: '', p_sub: '', endpoint: 'pkg_categorias/LISTAR_CATEGORIAS_P' })
       })
       .then(res => res.json())
       .then(data => {
@@ -116,8 +116,8 @@
     }
 
     function carregarUsuarios() {
-      fetch(apiBase + 'pkg_usuarios/LISTAR_USUARIOS_P', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      fetch(apiBase, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: 'pkg_usuarios/LISTAR_USUARIOS_P' }) })
         .then(res => res.json())
         .then(data => {
           const select = document.getElementById('usuario');
@@ -222,10 +222,10 @@
       document.getElementById('spinnerSalvar').classList.remove('d-none');
       document.getElementById('btnTextSalvar').classList.add('d-none');
 
-      fetch(apiBase + rota, {
+      fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyFinal)
+        body: JSON.stringify({ ...bodyFinal, endpoint: rota })
       })
         .then(res => res.json())
         .then(data => {

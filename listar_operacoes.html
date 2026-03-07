@@ -152,7 +152,7 @@
   </div>
 
   <script>
-    const apiBase = "https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/";
+    const apiBase = '/.netlify/functions/api-proxy';
     let operacoes = [], categorias = [], operadoras = [], usuarios = [];
     let paginaAtual = 1, porPagina = 30;
 
@@ -182,10 +182,10 @@
         p_desc_fatura: document.getElementById('filtroFatura')?.value
       };
 
-      fetch(apiBase + 'pkg_operacoes/LISTAR_OPERACOES_P', {
+      fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ ...body, endpoint: 'pkg_operacoes/LISTAR_OPERACOES_P' })
       })
       .then(res => res.json())
       .then(data => {
@@ -280,10 +280,11 @@
       const subSelect = document.getElementById('editarSubcategoria');
       if(!subSelect) return;
 
-      fetch(apiBase + 'pkg_categorias/LISTAR_SUBCATEGORIA_P', {
+      fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          endpoint: 'pkg_categorias/LISTAR_SUBCATEGORIA_P',
           p_nome: categorias.find(c => c.id_categoria === idCategoria)?.nm_categoria
         })
       })
@@ -320,10 +321,10 @@
         p_parcela_total: 1  // Ajustar conforme necessidade
       };
 
-      fetch(apiBase + 'pkg_operacoes/ALTERAR_OPERACOES_P', {
+      fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ ...body, endpoint: 'pkg_operacoes/ALTERAR_OPERACOES_P' })
       })
       .then(res => res.json())
       .then(data => {
@@ -377,10 +378,10 @@
     }
 
     function carregarOperadoras() {
-      return fetch(apiBase + 'pkg_operadoras/LISTAR_OPERADORAS_P', {
+      return fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}'
+        body: JSON.stringify({ endpoint: 'pkg_operadoras/LISTAR_OPERADORAS_P' })
       })
       .then(res => res.json())
       .then(data => {
@@ -395,10 +396,10 @@
     }
 
     function carregarUsuarios() {
-      return fetch(apiBase + 'pkg_usuarios/LISTAR_USUARIOS_P', {
+      return fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}'
+        body: JSON.stringify({ endpoint: 'pkg_usuarios/LISTAR_USUARIOS_P' })
       })
       .then(res => res.json())
       .then(data => {
@@ -422,10 +423,10 @@
     }
 
     function carregarCategorias() {
-      return fetch(apiBase + 'pkg_categorias/LISTAR_CATEGORIAS_P', {
+      return fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}'
+        body: JSON.stringify({ endpoint: 'pkg_categorias/LISTAR_CATEGORIAS_P' })
       })
       .then(res => res.json())
       .then(data => {
