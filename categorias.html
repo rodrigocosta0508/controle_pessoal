@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerenciar Categorias</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .tab-content { margin-top: 20px; }
+    .spinner-border { width: 1.5rem; height: 1.5rem; }
+    .d-none { display: none !important; }
+    .form-section { max-width: 500px; margin: auto; }
+    #edit-form { display: none; }
+    .was-validated .form-control:invalid { border-color: #dc3545; }
+    .was-validated .form-control:valid { border-color: #198754; }
+  </style>
+</head>
+
+<body class="container py-4">
+  <h2 class="mb-4 text-center">Gerenciamento de Categorias</h2>
+  <ul class="nav nav-tabs" id="categoriaTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="criar-tab" data-bs-toggle="tab" data-bs-target="#criar" type="button" role="tab">Criar</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="listar-tab" data-bs-toggle="tab" data-bs-target="#listar" type="button" role="tab">Listar</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="alterar-tab" data-bs-toggle="tab" data-bs-target="#alterar" type="button" role="tab">Alterar</button>
+    </li>
+  </ul>
+  <div class="tab-content">
+    <!-- Aba Criar -->
+    <div class="tab-pane fade show active" id="criar" role="tabpanel">
+      <form class="form-section needs-validation" id="formCriar" novalidate>
+        <div class="mb-3">
+          <label for="nomeCategoria" class="form-label">Nome da Categoria</label>
+          <input type="text" class="form-control" id="nomeCategoria" required />
+          <div class="invalid-feedback">Campo obrigatório.</div>
+        </div>
+        <div class="mb-3">
+          <label for="nomeSubCategoria" class="form-label">Nome da Subcategoria</label>
+          <input type="text" class="form-control" id="nomeSubCategoria" required />
+          <div class="invalid-feedback">Campo obrigatório.</div>
+        </div>
+        <button class="btn btn-success w-100" type="submit">
+          <span id="spinnerCriar" class="spinner-border spinner-border-sm d-none"></span>
+          <span id="btnTextCriar">Criar Categoria</span>
+        </button>
+        <div id="msgCriar" class="mt-3"></div>
+      </form>
+    </div>
+
+    <!-- Aba Listar -->
+    <div class="tab-pane fade" id="listar" role="tabpanel">
+      <div class="text-center">
+        <div id="spinnerListar" class="spinner-border d-none"></div>
+      </div>
+      <table class="table table-bordered table-striped mt-3 d-none" id="tabelaCategorias">
+        <thead>
+          <tr>
+            <th class="d-none">ID</th>
+            <th>Categoria</th>
+            <th>Subcategoria</th>
+          </tr>
+        </thead>
+        <tbody id="listaCorpo"></tbody>
+      </table>
+    </div>
+
+    <!-- Aba Alterar -->
+    <div class="tab-pane fade" id="alterar" role="tabpanel">
+      <div class="form-section">
+        <div class="mb-3">
+          <label for="categoriaSelect" class="form-label">Categoria</label>
+          <select id="categoriaSelect" class="form-select" onchange="preencherSubcategorias()"></select>
+        </div>
+        <div class="mb-3">
+          <label for="subcategoriaSelect" class="form-label">Subcategoria</label>
+          <select id="subcategoriaSelect" class="form-select" onchange="carregarDadosEdicao()"></select>
+        </div>
+        <div id="edit-form">
+          <div class="mb-3">
+            <label for="novoNomeCategoria" class="form-label">Novo nome da categoria</label>
+            <input type="text" class="form-control" id="novoNomeCategoria">
+          </div>
+          <div class="mb-3">
+            <label for="novoNomeSubcategoria" class="form-label">Novo nome da subcategoria</label>
+            <input type="text" class="form-control" id="novoNomeSubcategoria">
+          </div>
+          <button class="btn btn-primary w-100 mb-2" onclick="alterarCategoria()">
+            <span id="spinnerAlterar" class="spinner-border spinner-border-sm d-none"></span>
+            <span id="btnTextAlterar">Salvar Alterações</span>
+          </button>
+          <button class="btn btn-danger w-100" onclick="removerCategoria()">
+            <span id="spinnerRemover" class="spinner-border spinner-border-sm d-none"></span>
+            <span id="btnTextRemover">Remover Categoria</span>
+          </button>
+          <div id="msgAlterar" class="mt-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = 'https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/pkg_categorias/';
+
+    document.getElementById('formCriar').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const form = this;
+      form.classList.add('was-validated');
+      if (!form.checkValidity()) return;
+      criarCategoria();
+    });
+
+    function mostrarMensagem(elementId, tipo, texto) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = `<div class="alert alert-${tipo}" role="alert">${texto}</div>`;
+    }
+
+    function criarCategoria() {
+      const nome = document.getElementById('nomeCategoria').value.trim();
+      const sub = document.getElementById('nomeSubCategoria').value.trim();
+      document.getElementById('spinnerCriar').classList.remove('d-none');
+      document.getElementById('btnTextCriar').classList.add('d-none');
+      fetch(apiBase + 'CRIAR_CATEGORIA_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_nome: nome, p_sub: sub })
+      })
+        .then(res => res.json())
+        .then(data => {
+          const tipo = data.p_status === 'SUCESSO' ? 'success' : 'danger';
+          mostrarMensagem('msgCriar', tipo, `[${data.p_status}] ${data.p_message}`);
+          if (data.p_status === 'SUCESSO') {
+            document.getElementById('formCriar').reset();
+            document.getElementById('formCriar').classList.remove('was-validated');
+          }
+        })
+        .catch(() => mostrarMensagem('msgCriar', 'danger', 'Erro ao comunicar com servidor.'))
+        .finally(() => {
+          document.getElementById('spinnerCriar').classList.add('d-none');
+          document.getElementById('btnTextCriar').classList.remove('d-none');
+        });
+    }
+
+    function listarCategorias() {
+      document.getElementById('spinnerListar').classList.remove('d-none');
+      fetch(apiBase + 'LISTAR_CATEGORIAS_P', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_nome: '', p_sub: '' })
+      })
+        .then(res => res.json())
+        .then(data => {
+          window.categoriasCache = data.p_cursor;
+          const corpo = document.getElementById('listaCorpo');
+          corpo.innerHTML = '';
+          data.p_cursor.forEach(item => {
+            corpo.innerHTML += `<tr><td class="d-none">${item.id_categoria}</td><td>${item.nm_categoria}</td><td>${item.nm_sub_categoria}</td></tr>`;
+          });
+          document.getElementById('tabelaCategorias').classList.remove('d-none');
+        })
+        .finally(() => document.getElementById('spinnerListar').classList.add('d-none'));
+    }
+
+    function preencherDropdownsParaAlteracao() {
+      listarCategorias(); // reaproveita chamada completa
+      setTimeout(() => {
+        const categorias = window.categoriasCache || [];
+        const catSelect = document.getElementById('categoriaSelect');
+        const nomesUnicos = [...new Set(categorias.map(c => c.nm_categoria))];
+        catSelect.innerHTML = nomesUnicos.map(n => `<option value="${n}">${n}</option>`).join('');
+        preencherSubcategorias();
+      }, 400);
+    }
+
+    function preencherSubcategorias() {
+      const categoria = document.getElementById('categoriaSelect').value;
+      const subSelect = document.getElementById('subcategoriaSelect');
+      const subcategorias = window.categoriasCache?.filter(c => c.nm_categoria === categoria) || [];
+      subSelect.innerHTML = subcategorias.map(c => `<option value="${c.nm_sub_categoria}">${c.nm_sub_categoria}</option>`).join('');
+      carregarDadosEdicao();
+    }
+
+    function carregarDadosEdicao() {
+      const categoria = document.getElementById('categoriaSelect').value;
+      const subcategoria = document.getElementById('subcategoriaSelect').value;
+      document.getElementById('novoNomeCategoria').value = categoria;
+      document.getElementById('novoNomeSubcategoria').value = subcategoria;
+      document.getElementById('edit-form').style.display = 'block';
+    }
+
+    function obterIdCategoria(cat, sub) {
+      return window.categoriasCache?.find(c => c.nm_categoria === cat && c.nm_sub_categoria === sub)?.id_categoria;
+    }
+
+    function alterarCategoria() {
+      const cat = document.getElementById('categoriaSelect').value;
+      const sub = document.getElementById('subcategoriaSelect').value;
+      const novoCat = document.getElementById('novoNomeCategoria').value.trim();
+      const novoSub = document.getElementById('novoNomeSubcategoria').value.trim();
+      const id = obterIdCategoria(cat, sub);
+      if (!id) return mostrarMensagem('msgAlterar', 'danger', 'Categoria não encontrada.');
+
+      document.getElementById('spinnerAlterar').classList.remove('d-none');
+      document.getElementById('btnTextAlterar').classList.add('d-none');
+      fetch(apiBase + 'ALTERAR_CATEGORIA_P', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_id: id, p_nm: novoCat, p_sub: novoSub })
+      })
+        .then(res => res.json())
+        .then(data => {
+          mostrarMensagem('msgAlterar', data.p_status === 'SUCESSO' ? 'success' : 'danger', `[${data.p_status}] ${data.p_message}`);
+        })
+        .finally(() => {
+          document.getElementById('spinnerAlterar').classList.add('d-none');
+          document.getElementById('btnTextAlterar').classList.remove('d-none');
+        });
+    }
+
+    function removerCategoria() {
+      const cat = document.getElementById('categoriaSelect').value;
+      const sub = document.getElementById('subcategoriaSelect').value;
+      const id = obterIdCategoria(cat, sub);
+      if (!id) return mostrarMensagem('msgAlterar', 'danger', 'Categoria não encontrada.');
+      if (!confirm(`Deseja remover a subcategoria "${sub}" da categoria "${cat}"?`)) return;
+
+      document.getElementById('spinnerRemover').classList.remove('d-none');
+      document.getElementById('btnTextRemover').classList.add('d-none');
+      fetch(apiBase + 'REMOVER_CATEGORIA_P', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_id: id })
+      })
+        .then(res => res.json())
+        .then(data => {
+          mostrarMensagem('msgAlterar', data.p_status === 'SUCESSO' ? 'success' : 'danger', `[${data.p_status}] ${data.p_message}`);
+          if (data.p_status === 'SUCESSO') preencherDropdownsParaAlteracao();
+        })
+        .finally(() => {
+          document.getElementById('spinnerRemover').classList.add('d-none');
+          document.getElementById('btnTextRemover').classList.remove('d-none');
+        });
+    }
+
+    document.getElementById('listar-tab').addEventListener('click', listarCategorias);
+    document.getElementById('alterar-tab').addEventListener('click', preencherDropdownsParaAlteracao);
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Controle de Usuários</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background-color: #f9f9f9;
+    }
+
+    h2 {
+      color: #333;
+    }
+
+    .card {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+
+    input[type="text"] {
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: calc(100% - 130px);
+      margin-right: 10px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      min-width: 120px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007BFF;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .message {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Criar Usuário</h2>
+    <input type="text" id="nomeUsuario" placeholder="Nome do usuário">
+    <button onclick="criarUsuario()" id="btnCriar">Criar</button>
+    <div class="message" id="msgCriar"></div>
+  </div>
+
+  <div class="card">
+    <h2>Remover Usuário</h2>
+    <input type="text" id="nomeRemover" placeholder="Nome do usuário">
+    <button onclick="removerUsuario()" id="btnRemover">Remover</button>
+    <div class="message" id="msgRemover"></div>
+  </div>
+
+  <div class="card">
+    <h2>Listar Usuários</h2>
+    <button onclick="listarUsuarios()" id="btnListar">Listar</button>
+    <div id="listaUsuarios"></div>
+  </div>
+
+  <script>
+    const baseURL = 'https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/pkg_usuarios';
+
+    function showSpinner(buttonId) {
+      const btn = document.getElementById(buttonId);
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div>';
+    }
+
+    function resetButton(buttonId, text) {
+      const btn = document.getElementById(buttonId);
+      btn.disabled = false;
+      btn.innerHTML = text;
+    }
+
+    async function criarUsuario() {
+      const nome = document.getElementById('nomeUsuario').value;
+      const msg = document.getElementById('msgCriar');
+      msg.textContent = '';
+      showSpinner('btnCriar');
+
+      try {
+        const response = await fetch(`${baseURL}/CRIAR_USUARIO_P`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_nome: nome })
+        });
+        const data = await response.json();
+        msg.textContent = `[${data.p_status}] ${data.p_message}`;
+      } catch (err) {
+        msg.textContent = 'Erro ao comunicar com o servidor.';
+      }
+
+      resetButton('btnCriar', 'Criar');
+    }
+
+    async function removerUsuario() {
+      const nome = document.getElementById('nomeRemover').value;
+      const msg = document.getElementById('msgRemover');
+      msg.textContent = '';
+      showSpinner('btnRemover');
+
+      try {
+        const response = await fetch(`${baseURL}/REMOVER_USUARIO_P`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_nome: nome })
+        });
+        const data = await response.json();
+        msg.textContent = `[${data.p_status}] ${data.p_message}`;
+      } catch (err) {
+        msg.textContent = 'Erro ao comunicar com o servidor.';
+      }
+
+      resetButton('btnRemover', 'Remover');
+    }
+
+    async function listarUsuarios() {
+      const container = document.getElementById('listaUsuarios');
+      container.innerHTML = '<div class="spinner" style="margin-top: 1rem;"></div>';
+      const btn = document.getElementById('btnListar');
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(`${baseURL}/LISTAR_USUARIOS_P`);
+        const data = await response.json();
+        if (data.p_cursor && data.p_cursor.length > 0) {
+          const rows = data.p_cursor.map(u =>
+            `<tr><td>${u.id_usuario}</td><td>${u.nm_usuario}</td></tr>`).join('');
+          container.innerHTML = `
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Nome do Usuário</th></tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        } else {
+          container.innerHTML = '<p>Nenhum usuário encontrado.</p>';
+        }
+      } catch (err) {
+        container.innerHTML = '<p>Erro ao carregar usuários.</p>';
+      }
+
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

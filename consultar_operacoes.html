@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar e Gerenciar Operações</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { padding-bottom: 2rem; }
+        .spinner-border { width: 1.5rem; height: 1.5rem; }
+        .d-none { display: none !important; }
+        .table-hover tbody tr { cursor: pointer; }
+        .table-hover tbody tr.row-selected { background-color: #e7f3ff; }
+        .table tbody td { vertical-align: middle; padding: 0.5rem 0.75rem; }
+        .table-sm { font-size: 0.875rem; }
+        input[type='text'].inline-edit, input[type='number'].inline-edit, select.inline-edit {
+            display: inline-block !important;
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .btn-inline { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        .bulk-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #f8f9fa;
+            border-top: 2px solid #dee2e6;
+            padding: 1rem;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .filter-section { background-color: #f8f9fa; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .results-section { margin-bottom: 3rem; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <h1 class="text-center mt-4 mb-4">Consultar e Gerenciar Operações</h1>
+
+        <!-- Messages Area -->
+        <div id="msgArea" class="mt-3"></div>
+
+        <!-- Filter Form -->
+        <div class="filter-section">
+            <h5 class="mb-3">Filtros de Busca</h5>
+            <form id="formFiltro" class="needs-validation" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label for="filtroId" class="form-label">ID Operação</label>
+                        <input type="number" id="filtroId" class="form-control" min="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroIdPar" class="form-label">ID Operação Par</label>
+                        <input type="number" id="filtroIdPar" class="form-control" min="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroTipo" class="form-label">Tipo de Operação</label>
+                        <select id="filtroTipo" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="DÉBITO">Débito</option>
+                            <option value="CRÉDITO">Crédito</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroUsuario" class="form-label">Usuário</label>
+                        <select id="filtroUsuario" class="form-select">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroCategoria" class="form-label">Categoria</label>
+                        <select id="filtroCategoria" class="form-select" onchange="carregarSubcategoriasFilter()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroSubcategoria" class="form-label">Subcategoria</label>
+                        <select id="filtroSubcategoria" class="form-select">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroResponsavel" class="form-label">Responsável</label>
+                        <select id="filtroResponsavel" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="R">Rodrigo</option>
+                            <option value="C">Cris</option>
+                            <option value="A">Ambos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-2">
+                        <label for="filtroDtIni" class="form-label">Data Inicial</label>
+                        <input type="date" id="filtroDtIni" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filtroDtFim" class="form-label">Data Final</label>
+                        <input type="date" id="filtroDtFim" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="filtroFatura" class="form-label">Descrição da Fatura</label>
+                        <input type="text" id="filtroFatura" class="form-control">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <span id="spinnerBuscar" class="spinner-border spinner-border-sm d-none me-2"></span>
+                            <span id="btnBuscarTexto">Buscar</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="limparFiltros()">Limpar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section">
+            <h5 class="mb-3">Resultados (<span id="totalRegistros">0</span> registros)</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selecionarTodos" class="form-check-input">
+                            </th>
+                            <th>ID</th>
+                            <th>ID PARC</th>
+                            <th>Tipo</th>
+                            <th>Operadora</th>
+                            <th>Fatura</th>
+                            <th>Usuário</th>
+                            <th>Categoria</th>
+                            <th>Subcategoria</th>
+                            <th>Valor</th>
+                            <th>Data</th>
+                            <th>Responsável</th>
+                            <th>Parcelas</th>
+                            <th style="width: 120px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaResultados">
+                        <tr>
+                            <td colspan="14" class="text-center text-muted py-4">Nenhum resultado. Clique em "Buscar" para consultar operações.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Action Bar -->
+    <div id="bulkActionBar" class="bulk-action-bar d-none">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong id="bulkSelectCount">0</strong> operações selecionadas
+            </div>
+            <div class="gap-2">
+                <button class="btn btn-danger" onclick="deletarMultiplos()">
+                    <i class="fas fa-trash"></i> Deletar Selecionadas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="modalEdicao" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Operação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEdicao" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editarId" class="form-label">ID (Somente Leitura)</label>
+                                <input type="text" id="editarId" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarTipo" class="form-label">Tipo (Somente Leitura)</label>
+                                <input type="text" id="editarTipo" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="editarValor" class="form-label">Valor da Operação</label>
+                                <input type="number" step="0.01" id="editarValor" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarData" class="form-label">Data da Operação</label>
+                                <input type="date" id="editarData" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarResponsavel" class="form-label">Responsável</label>
+                                <select id="editarResponsavel" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                    <option value="R">Rodrigo</option>
+                                    <option value="C">Cris</option>
+                                    <option value="A">Ambos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarCategoria" class="form-label">Categoria</label>
+                                <select id="editarCategoria" class="form-select" required onchange="carregarSubcategoriasModal()">
+                                    <option value="">Selecione</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarSubcategoria" class="form-label">Subcategoria</label>
+                                <select id="editarSubcategoria" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                </select>
+                            </div>
+                            <div id="blocoEdicaoCredito" class="col-md-12 d-none">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="editarOperadora" class="form-label">Operadora</label>
+                                        <select id="editarOperadora" class="form-select">
+                                            <option value="">Selecione</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editarUsuario" class="form-label">Usuário</label>
+                                        <select id="editarUsuario" class="form-select">
+                                            <option value="">Selecione</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editarParcelasAtual" class="form-label">Parcela Atual</label>
+                                        <input type="number" id="editarParcelasAtual" class="form-control" min="1">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editarParcelasTotal" class="form-label">Total de Parcelas</label>
+                                        <input type="number" id="editarParcelasTotal" class="form-control" min="1">
+                                    </div>
+                                </div>
+                                <div id="msgEdicao" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="salvarEdicao()">
+                        <span id="spinnerSalvar" class="spinner-border spinner-border-sm d-none me-2"></span>
+                        <span id="btnSalvarTexto">Salvar Alterações</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiBase = 'https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/';
+
+        // Global state
+        let operacoes = [];
+        let categorias = [];
+        let usuarios = [];
+        let operadores = [];
+        let selectedRows = new Set();
+        let operacaoEmEdicao = null;
+
+        // ===== INITIALIZATION =====
+        window.onload = () => {
+            carregarDropdowns().then(() => {
+                mostrarMensagem('msgArea', 'info', 'Use os filtros acima para consultar operações.');
+            });
+        };
+
+        // ===== DROPDOWN FUNCTIONS =====
+        function carregarDropdowns() {
+            return Promise.all([
+                carregarCategorias(),
+                carregarUsuarios(),
+                carregarOperadores()
+            ]);
+        }
+
+        function carregarCategorias() {
+            return fetch(apiBase + 'pkg_categorias/LISTAR_CATEGORIAS_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ p_nome: '', p_sub: '' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                categorias = data.p_cursor || [];
+                window.categoriasCache = categorias;
+                const unicas = [...new Set(categorias.map(c => c.nm_categoria))];
+
+                document.getElementById('filtroCategoria').innerHTML = '<option value="">Todos</option>' +
+                    unicas.map(c => `<option value="${c}">${c}</option>`).join('');
+                document.getElementById('editarCategoria').innerHTML = '<option value="">Selecione</option>' +
+                    unicas.map(c => `<option value="${c}">${c}</option>`).join('');
+            });
+        }
+
+        function carregarUsuarios() {
+            return fetch(apiBase + 'pkg_usuarios/LISTAR_USUARIOS_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+            .then(res => res.json())
+            .then(data => {
+                usuarios = data.p_cursor || [];
+                const opts = usuarios.map(u => `<option value="${u.nm_usuario}" data-id="${u.id_usuario}">${u.nm_usuario}</option>`).join('');
+                document.getElementById('filtroUsuario').innerHTML = '<option value="">Todos</option>' + opts;
+                document.getElementById('editarUsuario').innerHTML = '<option value="">Selecione</option>' + opts;
+            });
+        }
+
+        function carregarOperadores() {
+            return fetch(apiBase + 'pkg_operadoras/LISTAR_OPERADORAS_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+            .then(res => res.json())
+            .then(data => {
+                operadores = data.p_cursor || [];
+                const opts = operadores.map(o => `<option value="${o.nm_operadora}" data-id="${o.id_operadora}">${o.nm_operadora}</option>`).join('');
+                document.getElementById('editarOperadora').innerHTML = '<option value="">Selecione</option>' + opts;
+            });
+        }
+
+        function carregarSubcategoriasFilter() {
+            const cat = document.getElementById('filtroCategoria').value;
+            const subs = categorias.filter(c => c.nm_categoria === cat).map(c => c.nm_sub_categoria);
+            document.getElementById('filtroSubcategoria').innerHTML = '<option value="">Todos</option>' +
+                subs.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        function carregarSubcategoriasModal() {
+            const cat = document.getElementById('editarCategoria').value;
+            const subs = categorias.filter(c => c.nm_categoria === cat).map(c => c.nm_sub_categoria);
+            document.getElementById('editarSubcategoria').innerHTML = '<option value="">Selecione</option>' +
+                subs.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        // ===== SEARCH/FILTER FUNCTIONS =====
+        document.getElementById('formFiltro').addEventListener('submit', function(e) {
+            e.preventDefault();
+            buscarOperacoes();
+        });
+
+        function buscarOperacoes() {
+            const id = document.getElementById('filtroId').value ? parseInt(document.getElementById('filtroId').value) : null;
+            const idPar = document.getElementById('filtroIdPar').value ? parseInt(document.getElementById('filtroIdPar').value) : null;
+            const tipo = document.getElementById('filtroTipo').value || null;
+            const usuario = document.getElementById('filtroUsuario').value || null;
+            const categoria = document.getElementById('filtroCategoria').value || null;
+            const subcategoria = document.getElementById('filtroSubcategoria').value || null;
+            const responsavel = document.getElementById('filtroResponsavel').value || null;
+            const dtIni = document.getElementById('filtroDtIni').value ? formatarDataParaAPI(document.getElementById('filtroDtIni').value) : null;
+            const dtFim = document.getElementById('filtroDtFim').value ? formatarDataParaAPI(document.getElementById('filtroDtFim').value) : null;
+            const descFatura = document.getElementById('filtroFatura').value || null;
+
+            const body = {
+                p_id_operacao: id,
+                p_id_operacao_par: idPar,
+                p_tipo_operacao: tipo,
+                p_usuario: usuario,
+                p_categoria: categoria,
+                p_sub_categoria: subcategoria,
+                p_responsavel: responsavel,
+                p_dt_ini: dtIni,
+                p_dt_fim: dtFim,
+                p_desc_fatura: descFatura,
+                p_limit: 1000,
+                p_offset: 0
+            };
+
+            document.getElementById('spinnerBuscar').classList.remove('d-none');
+            document.getElementById('btnBuscarTexto').classList.add('d-none');
+
+            fetch(apiBase + 'pkg_operacoes/LISTAR_OPERACOES_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.p_status === 'SUCESSO') {
+                    operacoes = data.p_cursor || [];
+                    // Sort by data (descending - most recent first)
+                    operacoes.sort((a, b) => {
+                        const dataA = converterDataParaComparacao(a.dt_operacao);
+                        const dataB = converterDataParaComparacao(b.dt_operacao);
+                        return dataB - dataA;
+                    });
+                    renderizarTabela();
+                    mostrarMensagem('msgArea', 'success', `${operacoes.length} operações encontradas.`);
+                } else {
+                    mostrarMensagem('msgArea', 'danger', data.p_message || 'Erro ao buscar operações.');
+                }
+            })
+            .catch(err => {
+                mostrarMensagem('msgArea', 'danger', 'Erro ao conectar com o servidor.');
+                console.error(err);
+            })
+            .finally(() => {
+                document.getElementById('spinnerBuscar').classList.add('d-none');
+                document.getElementById('btnBuscarTexto').classList.remove('d-none');
+            });
+        }
+
+        function limparFiltros() {
+            document.getElementById('formFiltro').reset();
+            operacoes = [];
+            selectedRows.clear();
+            renderizarTabela();
+            atualizarBulkBar();
+            mostrarMensagem('msgArea', 'info', 'Filtros limpos.');
+        }
+
+        // ===== TABLE RENDERING =====
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabelaResultados');
+            document.getElementById('totalRegistros').textContent = operacoes.length;
+
+            if (operacoes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Nenhum resultado encontrado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = operacoes.map(op => {
+                const isSelected = selectedRows.has(op.id_operacao);
+                const rowClass = isSelected ? 'row-selected' : '';
+                return `
+                    <tr class="${rowClass}" data-id="${op.id_operacao}">
+                        <td>
+                            <input type="checkbox" name="operacao-checkbox" value="${op.id_operacao}"
+                                   class="form-check-input" ${isSelected ? 'checked' : ''}>
+                        </td>
+                        <td>${op.id_operacao}</td>
+                        <td>${op.id_operacao_par || '-'}</td>
+                        <td>${op.tipo_operacao}</td>
+                        <td>${op.nm_operadora || '-'}</td>
+                        <td>${op.desc_fatura || '-'}</td>
+                        <td class="editable-cell" data-campo="usuario">${op.nm_usuario || '-'}</td>
+                        <td class="editable-cell" data-campo="categoria">${op.nm_categoria}</td>
+                        <td class="editable-cell" data-campo="subcategoria">${op.nm_sub_categoria}</td>
+                        <td class="editable-cell text-end" data-campo="valor" data-type="number">${formatarValor(op.vl_operacao)}</td>
+                        <td class="editable-cell" data-campo="data">${formatarDataParaDisplay(op.dt_operacao)}</td>
+                        <td class="editable-cell" data-campo="responsavel">${formatarResponsavel(op.tp_responsavel)}</td>
+                        <td>${op.parcela_atual || '-'}/${op.parcela_total || '-'}</td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary btn-inline" onclick="abrirModalEdicao(${op.id_operacao})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger btn-inline" onclick="deletarOperacao(${op.id_operacao})" title="Deletar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ===== INLINE EDITING =====
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('editable-cell') || e.target.querySelector('input')) return;
+
+            const cell = e.target;
+            const campo = cell.dataset.campo;
+            const tipo = cell.dataset.type || 'text';
+            const valor = cell.textContent.trim();
+            const id = e.target.closest('tr').dataset.id;
+
+            const input = document.createElement('input');
+            input.type = tipo === 'number' ? 'number' : 'text';
+            input.className = 'inline-edit form-control form-control-sm';
+            input.value = valor;
+            if (tipo === 'number') input.step = '0.01';
+
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            function cancelEdit() {
+                renderizarTabela();
+            }
+
+            function saveEdit() {
+                salvarEdicaoInline(id, campo, input.value, cancelEdit);
+            }
+
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keydown', (evt) => {
+                if (evt.key === 'Enter') saveEdit();
+                if (evt.key === 'Escape') cancelEdit();
+            });
+        });
+
+        function salvarEdicaoInline(id, campo, valor, callback) {
+            const op = operacoes.find(o => o.id_operacao === parseInt(id));
+            if (!op) return;
+
+            let idCategoria = null, idUsuario = null;
+
+            if (campo === 'categoria') {
+                const cat = categorias.find(c => c.nm_categoria === valor);
+                idCategoria = cat ? cat.id_categoria : null;
+            } else if (campo === 'usuario') {
+                const usr = usuarios.find(u => u.nm_usuario === valor);
+                idUsuario = usr ? usr.id_usuario : null;
+            }
+
+            const body = {
+                p_id_operacao: parseInt(id),
+                p_vl_operacao: campo === 'valor' ? parseFloat(valor) : null,
+                p_dt_operacao: campo === 'data' ? valor : null,
+                p_id_categoria: idCategoria,
+                p_id_usuario: idUsuario,
+                p_tp_responsavel: campo === 'responsavel' ? valor : null
+            };
+
+            fetch(apiBase + 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.p_status === 'SUCESSO') {
+                    mostrarMensagem('msgArea', 'success', 'Operação atualizada com sucesso!');
+                    buscarOperacoes();
+                } else {
+                    mostrarMensagem('msgArea', 'danger', data.p_message || 'Erro ao atualizar.');
+                    renderizarTabela();
+                }
+            })
+            .catch(err => {
+                mostrarMensagem('msgArea', 'danger', 'Erro ao conectar com servidor.');
+                console.error(err);
+                renderizarTabela();
+            });
+        }
+
+        // ===== MODAL EDITING =====
+        function abrirModalEdicao(id) {
+            const op = operacoes.find(o => o.id_operacao === id);
+            if (!op) return;
+
+            operacaoEmEdicao = op;
+
+            document.getElementById('editarId').value = op.id_operacao;
+            document.getElementById('editarTipo').value = op.tipo_operacao;
+            document.getElementById('editarValor').value = op.vl_operacao;
+            document.getElementById('editarData').value = converterDataParaInput(op.dt_operacao);
+            document.getElementById('editarResponsavel').value = op.tp_responsavel;
+            document.getElementById('editarCategoria').value = op.nm_categoria;
+
+            carregarSubcategoriasModal();
+            document.getElementById('editarSubcategoria').value = op.nm_sub_categoria;
+
+            if (op.tipo_operacao === 'CRÉDITO') {
+                document.getElementById('blocoEdicaoCredito').classList.remove('d-none');
+                document.getElementById('editarOperadora').value = op.nm_operadora || '';
+                document.getElementById('editarUsuario').value = op.nm_usuario || '';
+                document.getElementById('editarParcelasAtual').value = op.parcela_atual || 1;
+                document.getElementById('editarParcelasTotal').value = op.parcela_total || 1;
+            } else {
+                document.getElementById('blocoEdicaoCredito').classList.add('d-none');
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalEdicao'));
+            modal.show();
+        }
+
+        function salvarEdicao() {
+            const form = document.getElementById('formEdicao');
+            form.classList.add('was-validated');
+            if (!form.checkValidity()) return;
+
+            const idOp = parseInt(document.getElementById('editarId').value);
+            const cat = document.getElementById('editarCategoria').value;
+            const sub = document.getElementById('editarSubcategoria').value;
+
+            const catObj = categorias.find(c => c.nm_categoria === cat && c.nm_sub_categoria === sub);
+            const idCat = catObj ? catObj.id_categoria : null;
+
+            const usuario = document.getElementById('editarUsuario').value;
+            const usuarioObj = usuarios.find(u => u.nm_usuario === usuario);
+            const idUsuario = usuarioObj ? usuarioObj.id_usuario : null;
+
+            const body = {
+                p_id_operacao: idOp,
+                p_vl_operacao: parseFloat(document.getElementById('editarValor').value),
+                p_dt_operacao: formatarDataParaAPI(document.getElementById('editarData').value),
+                p_id_categoria: idCat,
+                p_id_usuario: idUsuario,
+                p_tp_responsavel: document.getElementById('editarResponsavel').value,
+                p_parcela_atual: operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasAtual').value) : null,
+                p_parcela_total: operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasTotal').value) : null
+            };
+
+            document.getElementById('spinnerSalvar').classList.remove('d-none');
+            document.getElementById('btnSalvarTexto').classList.add('d-none');
+
+            fetch(apiBase + 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.p_status === 'SUCESSO') {
+                    mostrarMensagem('msgArea', 'success', 'Operação atualizada com sucesso!');
+                    bootstrap.Modal.getInstance(document.getElementById('modalEdicao')).hide();
+                    buscarOperacoes();
+                } else {
+                    mostrarMensagem('msgArea', 'danger', data.p_message || 'Erro ao atualizar operação.');
+                }
+            })
+            .catch(err => {
+                mostrarMensagem('msgArea', 'danger', 'Erro ao conectar com servidor.');
+                console.error(err);
+            })
+            .finally(() => {
+                document.getElementById('spinnerSalvar').classList.add('d-none');
+                document.getElementById('btnSalvarTexto').classList.remove('d-none');
+            });
+        }
+
+        // ===== CHECKBOX HANDLING =====
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'operacao-checkbox') {
+                const id = parseInt(e.target.value);
+                if (e.target.checked) {
+                    selectedRows.add(id);
+                } else {
+                    selectedRows.delete(id);
+                }
+                atualizarBulkBar();
+            }
+        });
+
+        document.getElementById('selecionarTodos').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('input[name="operacao-checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+                const id = parseInt(cb.value);
+                if (this.checked) {
+                    selectedRows.add(id);
+                } else {
+                    selectedRows.delete(id);
+                }
+            });
+            atualizarBulkBar();
+        });
+
+        function atualizarBulkBar() {
+            const bar = document.getElementById('bulkActionBar');
+            const count = selectedRows.size;
+
+            if (count === 0) {
+                bar.classList.add('d-none');
+                return;
+            }
+
+            document.getElementById('bulkSelectCount').textContent = count;
+            bar.classList.remove('d-none');
+
+            // Highlight selected rows
+            document.querySelectorAll('tbody tr').forEach(tr => {
+                const id = parseInt(tr.dataset.id);
+                if (selectedRows.has(id)) {
+                    tr.classList.add('row-selected');
+                } else {
+                    tr.classList.remove('row-selected');
+                }
+            });
+        }
+
+        // ===== DELETE FUNCTIONS =====
+        function deletarOperacao(id) {
+            const op = operacoes.find(o => o.id_operacao === id);
+            if (!op) return;
+
+            if (!confirm(`Deseja deletar a operação ID ${id} (${op.nm_categoria}/${op.nm_sub_categoria} - R$${op.vl_operacao})?`)) {
+                return;
+            }
+
+            fetch(apiBase + 'pkg_operacoes/REMOVER_OPERACAO_P', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ p_id: id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.p_status === 'SUCESSO') {
+                    mostrarMensagem('msgArea', 'success', 'Operação deletada com sucesso!');
+                    buscarOperacoes();
+                } else {
+                    mostrarMensagem('msgArea', 'danger', data.p_message || 'Erro ao deletar operação.');
+                }
+            })
+            .catch(err => {
+                mostrarMensagem('msgArea', 'danger', 'Erro ao conectar com servidor.');
+                console.error(err);
+            });
+        }
+
+        async function deletarMultiplos() {
+            if (selectedRows.size === 0) {
+                mostrarMensagem('msgArea', 'warning', 'Nenhuma operação selecionada.');
+                return;
+            }
+
+            if (!confirm(`Deseja deletar ${selectedRows.size} operação(ões)?`)) {
+                return;
+            }
+
+            const promises = Array.from(selectedRows).map(id =>
+                fetch(apiBase + 'pkg_operacoes/REMOVER_OPERACAO_P', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ p_id: id })
+                }).then(r => r.json())
+            );
+
+            const results = await Promise.all(promises);
+            const sucessos = results.filter(r => r.p_status === 'SUCESSO').length;
+            const falhas = results.length - sucessos;
+
+            selectedRows.clear();
+            document.getElementById('selecionarTodos').checked = false;
+            atualizarBulkBar();
+
+            if (falhas === 0) {
+                mostrarMensagem('msgArea', 'success', `${sucessos} operação(ões) deletada(s) com sucesso!`);
+            } else {
+                mostrarMensagem('msgArea', 'warning', `${sucessos} deletada(s), ${falhas} falharam.`);
+            }
+
+            buscarOperacoes();
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function mostrarMensagem(elementId, tipo, texto) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="alert alert-${tipo} alert-dismissible fade show" role="alert">
+                ${texto}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+
+        function formatarValor(valor) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        }
+
+        function formatarResponsavel(code) {
+            const map = { 'R': 'Rodrigo', 'C': 'Cris', 'A': 'Ambos' };
+            return map[code] || code;
+        }
+
+        function formatarDataParaAPI(dataBR) {
+            if (!dataBR) return null;
+            const [yyyy, mm, dd] = dataBR.split('-');
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        function converterDataParaInput(dataISO) {
+            if (!dataISO) return '';
+            // Handle ISO format (2026-02-18T00:00:00Z) or DD/MM/YYYY format
+            if (dataISO.includes('T')) {
+                const [yyyy, mm, dd] = dataISO.split('T')[0].split('-');
+                return `${yyyy}-${mm}-${dd}`;
+            } else {
+                const [dd, mm, yyyy] = dataISO.split('/');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+        }
+
+        function formatarDataParaDisplay(dataISO) {
+            if (!dataISO) return '-';
+            // Handle ISO format (2026-02-18T00:00:00Z) or DD/MM/YYYY format
+            if (dataISO.includes('T')) {
+                const [yyyy, mm, dd] = dataISO.split('T')[0].split('-');
+                return `${dd}-${mm}-${yyyy}`;
+            } else {
+                const [dd, mm, yyyy] = dataISO.split('/');
+                return `${dd}-${mm}-${yyyy}`;
+            }
+        }
+
+        function converterDataParaComparacao(dataISO) {
+            if (!dataISO) return 0;
+            let yyyy, mm, dd;
+            // Handle ISO format (2026-02-18T00:00:00Z) or DD/MM/YYYY format
+            if (dataISO.includes('T')) {
+                [yyyy, mm, dd] = dataISO.split('T')[0].split('-');
+            } else {
+                [dd, mm, yyyy] = dataISO.split('/');
+            }
+            return new Date(yyyy, parseInt(mm) - 1, dd).getTime();
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

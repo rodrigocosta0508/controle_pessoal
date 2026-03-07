@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listar Operações</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .container { max-width: 1200px; margin-top: 2rem; }
+    .spinner-border-sm { width: 1rem; height: 1rem; }
+    table th, table td { vertical-align: middle; font-size: 0.875rem; }
+    .table td.parcela { text-align: center; }
+    @media (max-width: 768px) {
+      .row.g-3 > .col-md-3 { margin-bottom: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="mb-4 text-center">Consulta de Operações</h2>
+
+    <form id="formFiltro" class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="filtroTipo">
+          <option value="">Todos</option>
+          <option value="CRÉDITO">Crédito</option>
+          <option value="DÉBITO">Débito</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Responsável</label>
+        <select class="form-select" id="filtroResponsavel">
+          <option value="">Todos</option>
+          <option value="R">Rodrigo</option>
+          <option value="C">Cris</option>
+          <option value="A">Ambos</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Usuário</label>
+        <select class="form-select" id="filtroUsuario"></select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Fatura (YYYY-MM)</label>
+        <input class="form-control" id="filtroFatura" type="text" placeholder="2025-06">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Data Início</label>
+        <input class="form-control" id="filtroDtIni" type="date">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Data Fim</label>
+        <input class="form-control" id="filtroDtFim" type="date">
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">
+          <span class="spinner-border spinner-border-sm d-none" id="spinner"></span>
+          <span id="btnBuscarTexto">Buscar</span>
+        </button>
+      </div>
+    </form>
+
+    <div id="msgResultado"></div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Operadora</th>
+            <th>Fatura</th>
+            <th>Data</th>
+            <th>Usuário</th>
+            <th>Categoria</th>
+            <th>Subcategoria</th>
+            <th>Parcela</th>
+            <th>Responsável</th>
+            <th>Valor</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaResultados"></tbody>
+      </table>
+      <!-- Paginação existente aqui -->
+    </div>
+  </div>
+
+  <!-- Modal de Edição -->
+  <div class="modal fade" id="modalEdicao" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Operação</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formEdicao">
+            <input type="hidden" id="editarIdOperacao">
+            <div class="mb-3">
+              <label class="form-label">Tipo</label>
+              <select class="form-select" id="editarTipo" required>
+                <option value="CRÉDITO">Crédito</option>
+                <option value="DÉBITO">Débito</option>
+              </select>
+            </div>
+            <div class="mb-3" id="blocoOperadora">
+              <label class="form-label">Operadora</label>
+              <select class="form-select" id="editarOperadora"></select>
+            </div>
+            <div class="mb-3" id="blocoUsuario">
+              <label class="form-label">Usuário</label>
+              <select class="form-select" id="editarUsuario"></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Categoria</label>
+              <select class="form-select" id="editarCategoria" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Subcategoria</label>
+              <select class="form-select" id="editarSubcategoria" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Valor</label>
+              <input type="number" step="0.01" class="form-control" id="editarValor" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Responsável</label>
+              <select class="form-select" id="editarResponsavel" required>
+                <option value="R">Rodrigo</option>
+                <option value="C">Cris</option>
+                <option value="A">Ambos</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Data</label>
+              <input type="date" class="form-control" id="editarData" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="salvarEdicao()">
+            <span class="spinner-border spinner-border-sm d-none" id="spinnerEdicao"></span>
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = "https://g9f388f29ddf339-ve8wjezt6vnl93qx.adb.sa-vinhedo-1.oraclecloudapps.com/ords/rodrigo/";
+    let operacoes = [], categorias = [], operadoras = [], usuarios = [];
+    let paginaAtual = 1, porPagina = 30;
+
+    // Funções principais
+    document.getElementById('formFiltro').addEventListener('submit', function(e) {
+      e.preventDefault();
+      buscarOperacoes();
+    });
+
+    function buscarOperacoes() {
+      const spinner = document.getElementById('spinnerBuscar');
+      const texto = document.getElementById('btnBuscarTexto');
+      
+      if(spinner && texto) {
+        spinner.classList.remove('d-none');
+        texto.classList.add('d-none');
+      }
+
+      const body = {
+        p_tipo_operacao: document.getElementById('filtroTipo')?.value,
+        p_usuario: document.getElementById('filtroUsuario')?.value,
+        p_categoria: document.getElementById('filtroCategoria')?.value,
+        p_sub_categoria: document.getElementById('filtroSubcategoria')?.value,
+        p_responsavel: document.getElementById('filtroResponsavel')?.value,
+        p_dt_ini: document.getElementById('filtroDtIni')?.value ? formatarDataParaAPI(document.getElementById('filtroDtIni').value) : null,
+        p_dt_fim: document.getElementById('filtroDtFim')?.value ? formatarDataParaAPI(document.getElementById('filtroDtFim').value) : null,
+        p_desc_fatura: document.getElementById('filtroFatura')?.value
+      };
+
+      fetch(apiBase + 'pkg_operacoes/LISTAR_OPERACOES_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(res => res.json())
+      .then(data => {
+        operacoes = data.p_cursor || [];
+        renderizarTabela();
+      })
+      .catch(error => {
+        console.error('Erro ao buscar operações:', error);
+        document.getElementById('msgResultado').innerHTML = `
+          <div class="alert alert-danger">Erro ao buscar operações: ${error.message}</div>
+        `;
+      })
+      .finally(() => {
+        if(spinner && texto) {
+          spinner.classList.add('d-none');
+          texto.classList.remove('d-none');
+        }
+      });
+    }
+
+    function renderizarTabela() {
+      const tbody = document.getElementById('tabelaResultados');
+      if(!tbody) return;
+
+      tbody.innerHTML = '';
+      
+      if(operacoes.length === 0) {
+        document.getElementById('msgResultado').innerHTML = `
+          <div class="alert alert-warning">Nenhuma operação encontrada</div>
+        `;
+        return;
+      }
+
+      operacoes.forEach(op => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${op.id_operacao}</td>
+          <td>${op.tipo_operacao}</td>
+          <td>${op.nm_operadora || '-'}</td>
+          <td>${op.desc_fatura || '-'}</td>
+          <td>${formatarDataParaExibicao(op.dt_operacao)}</td>
+          <td>${op.nm_usuario || '-'}</td>
+          <td>${op.nm_categoria}</td>
+          <td>${op.nm_sub_categoria}</td>
+          <td class="parcela">${op.parcela_atual || '-'}/${op.parcela_total || '-'}</td>
+          <td>${formatarResponsavel(op.tp_responsavel)}</td>
+          <td>R$ ${op.vl_operacao.toFixed(2)}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="abrirModalEdicao(${op.id_operacao})">
+              <i class="fas fa-edit"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Funções de edição
+    function abrirModalEdicao(id) {
+      const operacao = operacoes.find(op => op.id_operacao === id);
+      if(!operacao) return;
+
+      const modal = new bootstrap.Modal(document.getElementById('modalEdicao'));
+      
+      // Preenche os campos do modal
+      document.getElementById('editarIdOperacao').value = operacao.id_operacao;
+      document.getElementById('editarTipo').value = operacao.tipo_operacao;
+      document.getElementById('editarValor').value = operacao.vl_operacao;
+      document.getElementById('editarResponsavel').value = operacao.tp_responsavel;
+      document.getElementById('editarData').value = operacao.dt_operacao?.split('T')[0] || '';
+      
+      // Mostra/esconde campos conforme o tipo
+      const isCredito = operacao.tipo_operacao === 'CRÉDITO';
+      document.getElementById('blocoOperadora').classList.toggle('d-none', !isCredito);
+      document.getElementById('blocoUsuario').classList.toggle('d-none', !isCredito);
+
+      // Preenche selects com IDs
+      if(isCredito) {
+        document.getElementById('editarOperadora').value = operacao.id_operadora || '';
+        document.getElementById('editarUsuario').value = operacao.id_usuario || '';
+      }
+      
+      document.getElementById('editarCategoria').value = operacao.id_categoria;
+      
+      // Carrega subcategorias para a categoria selecionada
+      carregarSubcategoriasEdicao(operacao.id_categoria, operacao.nm_sub_categoria);
+
+      modal.show();
+    }
+
+    function carregarSubcategoriasEdicao(idCategoria, subcategoriaSelecionada) {
+      const subSelect = document.getElementById('editarSubcategoria');
+      if(!subSelect) return;
+
+      fetch(apiBase + 'pkg_categorias/LISTAR_SUBCATEGORIA_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          p_nome: categorias.find(c => c.id_categoria === idCategoria)?.nm_categoria
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const subs = data.p_cursor || [];
+        subSelect.innerHTML = subs.map(s => `
+          <option value="${s.id_categoria}" ${s.nm_sub_categoria === subcategoriaSelecionada ? 'selected' : ''}>
+            ${s.nm_sub_categoria}
+          </option>
+        `).join('');
+      });
+    }
+
+    function salvarEdicao() {
+      const spinner = document.getElementById('spinnerEdicao');
+      const btnSalvar = document.querySelector('#modalEdicao .btn-primary');
+      
+      spinner?.classList.remove('d-none');
+      btnSalvar.disabled = true;
+
+      const body = {
+        p_id_operacao: parseInt(document.getElementById('editarIdOperacao').value),
+        p_tipo_operacao: document.getElementById('editarTipo').value,
+        p_id_operadora: document.getElementById('editarOperadora')?.value ? 
+                       parseInt(document.getElementById('editarOperadora').value) : null,
+        p_id_usuario: document.getElementById('editarUsuario')?.value ? 
+                     parseInt(document.getElementById('editarUsuario').value) : null,
+        p_id_categoria: parseInt(document.getElementById('editarCategoria').value),
+        p_dt_operacao: formatarDataParaAPI(document.getElementById('editarData').value),
+        p_vl_operacao: parseFloat(document.getElementById('editarValor').value),
+        p_tp_responsavel: document.getElementById('editarResponsavel').value,
+        p_parcela_atual: 1, // Ajustar conforme necessidade
+        p_parcela_total: 1  // Ajustar conforme necessidade
+      };
+
+      fetch(apiBase + 'pkg_operacoes/ALTERAR_OPERACOES_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.p_status === 'SUCESSO') {
+          buscarOperacoes();
+          bootstrap.Modal.getInstance(document.getElementById('modalEdicao')).hide();
+          alert('Operação atualizada com sucesso!');
+        } else {
+          alert(`Erro: ${data.p_message}`);
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao salvar edição:', error);
+        alert('Erro ao salvar: ' + error.message);
+      })
+      .finally(() => {
+        spinner?.classList.add('d-none');
+        btnSalvar.disabled = false;
+      });
+    }
+
+    // Funções auxiliares
+    function formatarDataParaAPI(dataString) {
+      if(!dataString) return null;
+      const [year, month, day] = dataString.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    function formatarDataParaExibicao(dataString) {
+      if(!dataString) return '-';
+      const date = new Date(dataString);
+      return date.toLocaleDateString('pt-BR');
+    }
+
+    function formatarResponsavel(resp) {
+      const responsaveis = {
+        'R': 'Rodrigo',
+        'C': 'Cris',
+        'A': 'Ambos'
+      };
+      return responsaveis[resp] || resp;
+    }
+
+    // Carregamento inicial
+    function carregarDadosIniciais() {
+      Promise.all([
+        carregarOperadoras(),
+        carregarUsuarios(),
+        carregarCategorias()
+      ]).then(buscarOperacoes);
+    }
+
+    function carregarOperadoras() {
+      return fetch(apiBase + 'pkg_operadoras/LISTAR_OPERADORAS_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      })
+      .then(res => res.json())
+      .then(data => {
+        operadoras = data.p_cursor || [];
+        const select = document.getElementById('editarOperadora');
+        if(select) {
+          select.innerHTML = operadoras.map(op => `
+            <option value="${op.id_operadora}">${op.nm_operadora}</option>
+          `).join('');
+        }
+      });
+    }
+
+    function carregarUsuarios() {
+      return fetch(apiBase + 'pkg_usuarios/LISTAR_USUARIOS_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      })
+      .then(res => res.json())
+      .then(data => {
+        usuarios = data.p_cursor || [];
+        
+        // Select de filtro
+        const filtroSelect = document.getElementById('filtroUsuario');
+        if(filtroSelect) {
+          filtroSelect.innerHTML = '<option value="">Todos</option>' + 
+            usuarios.map(u => `<option value="${u.nm_usuario}">${u.nm_usuario}</option>`).join('');
+        }
+        
+        // Select de edição
+        const editSelect = document.getElementById('editarUsuario');
+        if(editSelect) {
+          editSelect.innerHTML = usuarios.map(u => `
+            <option value="${u.id_usuario}">${u.nm_usuario}</option>
+          `).join('');
+        }
+      });
+    }
+
+    function carregarCategorias() {
+      return fetch(apiBase + 'pkg_categorias/LISTAR_CATEGORIAS_P', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      })
+      .then(res => res.json())
+      .then(data => {
+        categorias = data.p_cursor || [];
+        
+        // Select de filtro
+        const filtroSelect = document.getElementById('filtroCategoria');
+        if(filtroSelect) {
+          const categoriasUnicas = [...new Set(categorias.map(c => c.nm_categoria))];
+          filtroSelect.innerHTML = '<option value="">Todas</option>' + 
+            categoriasUnicas.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        
+        // Select de edição
+        const editSelect = document.getElementById('editarCategoria');
+        if(editSelect) {
+          editSelect.innerHTML = categorias.map(c => `
+            <option value="${c.id_categoria}">${c.nm_categoria}</option>
+          `).join('');
+        }
+      });
+    }
+
+    // Inicialização
+    window.onload = carregarDadosIniciais;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
