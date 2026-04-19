@@ -3,6 +3,8 @@ let monthChart = null;
 let categoryChart = null;
 let creditChart = null;
 
+console.log('dashboard.js loaded');
+
 // Formato de moeda para exibição
 function formatarMoeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -11,23 +13,38 @@ function formatarMoeda(valor) {
     }).format(valor || 0);
 }
 
+function normalizarItem(item) {
+    if (!item || typeof item !== 'object') {
+        return item;
+    }
+    const normalized = {};
+    Object.keys(item).forEach(key => {
+        normalized[key.toLowerCase()] = item[key];
+    });
+    return normalized;
+}
+
 function extrairItems(response) {
     if (!response) {
         return [];
     }
+    let items = [];
     if (Array.isArray(response.items)) {
-        return response.items;
+        items = response.items;
+    } else if (Array.isArray(response.ITEMS)) {
+        items = response.ITEMS;
+    } else if (Array.isArray(response.p_cursor)) {
+        console.log('Extracted items from p_cursor:', response.p_cursor);
+        items = response.p_cursor;
+    } else if (Array.isArray(response.P_CURSOR)) {
+        console.log('Extracted items from P_CURSOR:', response.P_CURSOR);
+        items = response.P_CURSOR;
+    } else if (response.items && Array.isArray(response.items.items)) {
+        items = response.items.items;
+    } else if (response.items && Array.isArray(response.items.DATA)) {
+        items = response.items.DATA;
     }
-    if (Array.isArray(response.ITEMS)) {
-        return response.ITEMS;
-    }
-    if (response.items && Array.isArray(response.items.items)) {
-        return response.items.items;
-    }
-    if (response.items && Array.isArray(response.items.DATA)) {
-        return response.items.DATA;
-    }
-    return [];
+    return items.map(normalizarItem);
 }
 
 function extrairStats(response) {
@@ -42,9 +59,18 @@ function extrairStats(response) {
         return response;
     }
     if (typeof retorno === 'string') {
+        const raw = retorno.trim();
         try {
-            return JSON.parse(retorno);
+            return JSON.parse(raw);
         } catch (err) {
+            // Tentar reparar um JSON truncado
+            if (raw[0] === '{' && raw[raw.length - 1] !== '}') {
+                try {
+                    return JSON.parse(raw + '}');
+                } catch (err2) {
+                    return response;
+                }
+            }
             return response;
         }
     }
@@ -152,20 +178,21 @@ async function carregarPorMes() {
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', filtros);
         
-        // Processar dados para o gráfico
-        const items = response.items || [];
+        const items = extrairItems(response);
         
         // Agrupar por mês
         const mesesMap = {};
         items.forEach(item => {
-            const mes = new Date(item.MES).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+            const mes = new Date(item.mes).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
             if (!mesesMap[mes]) {
                 mesesMap[mes] = { debito: 0, credito: 0 };
             }
-            if (item.TIPO_OPERACAO === 'DÉBITO') {
-                mesesMap[mes].debito += item.TOTAL_VALOR;
+            const tipo = item.tipo_operacao || item.tipo_operacao;
+            const valor = Number(item.total_valor || item.total_valor || 0);
+            if (tipo === 'DÉBITO' || tipo === 'DEBITO') {
+                mesesMap[mes].debito += valor;
             } else {
-                mesesMap[mes].credito += item.TOTAL_VALOR;
+                mesesMap[mes].credito += valor;
             }
         });
 
@@ -250,11 +277,14 @@ async function carregarPorCategoria() {
         // Agrupar por categoria (apenas débitos)
         const categoriasMap = {};
         items.forEach(item => {
-            if (item.TIPO_OPERACAO === 'DÉBITO') {
-                if (!categoriasMap[item.NM_CATEGORIA]) {
-                    categoriasMap[item.NM_CATEGORIA] = 0;
+            const tipo = item.tipo_operacao;
+            if (tipo === 'DÉBITO' || tipo === 'DEBITO') {
+                const categoria = item.nm_categoria || item.nm_categoria || 'Sem categoria';
+                const valor = Number(item.total_valor || item.total_valor || 0);
+                if (!categoriasMap[categoria]) {
+                    categoriasMap[categoria] = 0;
                 }
-                categoriasMap[item.NM_CATEGORIA] += item.TOTAL_VALOR;
+                categoriasMap[categoria] += valor;
             }
         });
 
@@ -331,16 +361,22 @@ async function carregarTopCategorias() {
         if (items.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma categoria encontrada</td></tr>';
         } else {
-            tbody.innerHTML = items.map(item => `
+            tbody.innerHTML = items.map(item => {
+                const categoria = item.nm_categoria || item.nm_categoria || 'Sem categoria';
+                const valor = Number(item.total_valor || item.total_valor || 0);
+                const totalOperacoes = item.total_operacoes || item.total_operacoes || 0;
+                const percentual = item.percentual || item.percentual || 0;
+                return `
                 <tr>
-                    <td>${item.NM_CATEGORIA}</td>
-                    <td class="text-end">${formatarMoeda(item.TOTAL_VALOR)}</td>
-                    <td class="text-end">${item.TOTAL_OPERACOES}</td>
+                    <td>${categoria}</td>
+                    <td class="text-end">${formatarMoeda(valor)}</td>
+                    <td class="text-end">${totalOperacoes}</td>
                     <td class="text-end">
-                        <span class="badge-percentage">${item.PERCENTUAL}%</span>
+                        <span class="badge-percentage">${percentual}%</span>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         }
 
         loader.style.display = 'none';
@@ -380,12 +416,12 @@ async function carregarChartCredito() {
         // Filtrar apenas CRÉDITO
         const mesesMap = {};
         items.forEach(item => {
-            if (item.TIPO_OPERACAO === 'CRÉDITO') {
-                const mes = new Date(item.MES).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+            if (item.tipo_operacao === 'CRÉDITO' || item.tipo_operacao === 'CREDITO' || item.tipo_operacao === 'Crédito') {
+                const mes = new Date(item.mes).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
                 if (!mesesMap[mes]) {
                     mesesMap[mes] = 0;
                 }
-                mesesMap[mes] += item.TOTAL_VALOR;
+                mesesMap[mes] += item.total_valor || item.total_valor;
             }
         });
 
@@ -459,10 +495,10 @@ async function carregarTabelaHierarquica() {
         const mesesSet = new Set();
         
         items.forEach(item => {
-            const categoria = item.NM_CATEGORIA;
-            const subcategoria = item.NM_SUB_CATEGORIA || '(sem subcategoria)';
-            const mes = new Date(item.MES).toLocaleDateString('pt-BR', { month: '2-digit/yy' });
-            const tipo = item.TIPO_OPERACAO;
+            const categoria = item.nm_categoria || 'Sem categoria';
+            const subcategoria = item.nm_sub_categoria || '(sem subcategoria)';
+            const mes = new Date(item.mes).toLocaleDateString('pt-BR', { month: '2-digit/yy' });
+            const tipo = item.tipo_operacao;
             
             mesesSet.add(mes);
             
@@ -473,13 +509,14 @@ async function carregarTabelaHierarquica() {
                 dataMap[categoria][subcategoria] = {};
             }
             if (!dataMap[categoria][subcategoria][mes]) {
-                dataMap[categoria][subcategoria][mes] = { DEBITO: 0, CREDITO: 0 };
+                dataMap[categoria][subcategoria][mes] = { debito: 0, credito: 0 };
             }
             
-            if (tipo === 'DÉBITO') {
-                dataMap[categoria][subcategoria][mes].DEBITO += item.TOTAL_VALOR;
+            const valor = Number(item.total_valor || 0);
+            if (tipo === 'DÉBITO' || tipo === 'DEBITO') {
+                dataMap[categoria][subcategoria][mes].debito += valor;
             } else {
-                dataMap[categoria][subcategoria][mes].CREDITO += item.TOTAL_VALOR;
+                dataMap[categoria][subcategoria][mes].credito += valor;
             }
         });
 
@@ -511,7 +548,7 @@ async function carregarTabelaHierarquica() {
             subcategorias.forEach(subcategoria => {
                 meses.forEach(mes => {
                     const valores = dataMap[categoria][subcategoria][mes];
-                    const valor = valores.DEBITO - valores.CREDITO; // Débito negativo
+                    const valor = valores.debito - valores.credito; // Débito negativo
                     totalCategoria += valor;
                     totaisPorMes[mes] += valor;
                 });
@@ -538,7 +575,7 @@ async function carregarTabelaHierarquica() {
                 
                 meses.forEach(mes => {
                     const valores = dataMap[categoria][subcategoria][mes];
-                    const valor = valores.DEBITO - valores.CREDITO;
+                    const valor = valores.debito - valores.credito;
                     totalSubcategoria += valor;
                     subcatMeses[mes] = valor;
                 });
