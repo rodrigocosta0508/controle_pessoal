@@ -318,34 +318,8 @@
             <h5><i class="fas fa-filter"></i> Filtros</h5>
             <div class="filter-group">
                 <div>
-                    <label for="anoInicio" class="form-label">Ano Início</label>
-                    <select class="form-select" id="anoInicio">
-                        <option value="2023">2023</option>
-                        <option value="2024">2024</option>
-                        <option value="2025">2025</option>
-                        <option value="2026">2026</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="mesInicio" class="form-label">Mês Início</label>
-                    <select class="form-select" id="mesInicio">
-                        <option value="01">Janeiro</option>
-                        <option value="02">Fevereiro</option>
-                        <option value="03">Março</option>
-                        <option value="04">Abril</option>
-                        <option value="05">Maio</option>
-                        <option value="06">Junho</option>
-                        <option value="07">Julho</option>
-                        <option value="08">Agosto</option>
-                        <option value="09">Setembro</option>
-                        <option value="10">Outubro</option>
-                        <option value="11">Novembro</option>
-                        <option value="12">Dezembro</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="anoFim" class="form-label">Ano Fim</label>
-                    <select class="form-select" id="anoFim">
+                    <label for="ano" class="form-label">Ano</label>
+                    <select class="form-select" id="ano">
                         <option value="2023">2023</option>
                         <option value="2024">2024</option>
                         <option value="2025">2025</option>
@@ -353,8 +327,8 @@
                     </select>
                 </div>
                 <div>
-                    <label for="mesFim" class="form-label">Mês Fim</label>
-                    <select class="form-select" id="mesFim">
+                    <label for="mes" class="form-label">Mês</label>
+                    <select class="form-select" id="mes">
                         <option value="01">Janeiro</option>
                         <option value="02">Fevereiro</option>
                         <option value="03">Março</option>
@@ -378,6 +352,14 @@
                         <option value="A">Ambos</option>
                     </select>
                 </div>
+                <div>
+                    <label for="tipoOperacao" class="form-label">Tipo de Operação</label>
+                    <select class="form-select" id="tipoOperacao">
+                        <option value="">TODOS</option>
+                        <option value="DÉBITO">DÉBITO</option>
+                        <option value="CRÉDITO">CRÉDITO</option>
+                    </select>
+                </div>
                 <div class="d-flex align-items-end">
                     <button class="btn btn-primary w-100" onclick="carregarDashboard()">
                         <i class="fas fa-sync"></i> Atualizar
@@ -388,28 +370,6 @@
 
         <!-- Error Message -->
         <div id="errorMessage" class="error-message" style="display: none;"></div>
-
-        <!-- Summary Cards -->
-        <div class="summary-cards">
-            <div class="card-summary income">
-                <div class="card-summary-label">
-                    <i class="fas fa-arrow-up"></i> Receitas
-                </div>
-                <div class="card-summary-value" id="totalCredito">R$ 0,00</div>
-            </div>
-            <div class="card-summary expense">
-                <div class="card-summary-label">
-                    <i class="fas fa-arrow-down"></i> Despesas
-                </div>
-                <div class="card-summary-value" id="totalDebito">R$ 0,00</div>
-            </div>
-            <div class="card-summary balance">
-                <div class="card-summary-label">
-                    <i class="fas fa-balance-scale"></i> Saldo
-                </div>
-                <div class="card-summary-value" id="saldo">R$ 0,00</div>
-            </div>
-        </div>
 
         <!-- Charts -->
         <div class="charts-section">
@@ -492,17 +452,14 @@
     <script>
         // Load dashboard on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default date range (last 12 months)
+            // Set default to current month
             const today = new Date();
-            const lastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
             
-            // Set year dropdowns
-            document.getElementById('anoInicio').value = lastYear.getFullYear().toString();
-            document.getElementById('anoFim').value = today.getFullYear().toString();
+            // Set year dropdown
+            document.getElementById('ano').value = today.getFullYear().toString();
             
-            // Set month dropdowns (pad with zero)
-            document.getElementById('mesInicio').value = String(lastYear.getMonth() + 1).padStart(2, '0');
-            document.getElementById('mesFim').value = String(today.getMonth() + 1).padStart(2, '0');
+            // Set month dropdown (pad with zero)
+            document.getElementById('mes').value = String(today.getMonth() + 1).padStart(2, '0');
             
             carregarDashboard();
         });

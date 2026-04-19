@@ -61,36 +61,17 @@ function mostrarErro(mensagem) {
 
 // Obter parâmetros dos filtros
 function obterFiltros() {
-    const anoInicio = document.getElementById('anoInicio').value;
-    const mesInicio = document.getElementById('mesInicio').value;
-    const anoFim = document.getElementById('anoFim').value;
-    const mesFim = document.getElementById('mesFim').value;
+    const ano = document.getElementById('ano').value;
+    const mes = document.getElementById('mes').value;
     const responsavel = document.getElementById('responsavel').value || null;
-
-    // Criar datas para período completo (para funções que ainda usam dt_ini/dt_fim)
-    const dataInicio = `${anoInicio}-${mesInicio}-01`;
-    const ultimoDiaMes = new Date(anoFim, mesFim, 0).getDate();
-    const dataFim = `${anoFim}-${mesFim}-${ultimoDiaMes}`;
-
-    const dt_ini = dataInicio ? formatarDataParaOracle(dataInicio) : null;
-    const dt_fim = dataFim ? formatarDataParaOracle(dataFim) : null;
+    const tipoOperacao = document.getElementById('tipoOperacao').value || null;
 
     return {
-        // Parâmetros para funções com ano/mês único
-        p_dt_ano: anoFim,
-        p_dt_mes: mesFim,
-        // Parâmetros para funções com período (dt_ini/dt_fim)
-        dt_ini: dt_ini,
-        dt_fim: dt_fim,
-        // Parâmetros comuns
-        responsavel: responsavel
+        p_dt_ano: ano,
+        p_dt_mes: mes,
+        p_responsavel: responsavel,
+        p_tipo_operacao: tipoOperacao
     };
-}
-
-// Formatar data para o formato esperado pela API Oracle (DD/MM/YYYY)
-function formatarDataParaOracle(dataISO) {
-    const [ano, mes, dia] = dataISO.split('-');
-    return `${dia}/${mes}/${ano}`;
 }
 
 // Chamar API via proxy
@@ -231,7 +212,8 @@ async function carregarPorCategoria() {
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_CATEGORY_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.responsavel
+            p_responsavel: filtros.p_responsavel,
+            p_tipo_operacao: filtros.p_tipo_operacao
         });
         
         const items = extrairItems(response);
@@ -316,7 +298,8 @@ async function carregarTopCategorias() {
         const response = await chamarAPI('pkg_operacoes/GET_TOP_CATEGORIES_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.responsavel,
+            p_responsavel: filtros.p_responsavel,
+            p_tipo_operacao: filtros.p_tipo_operacao,
             p_limit: 10
         });
 
@@ -376,7 +359,8 @@ async function carregarChartCredito() {
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.responsavel
+            p_responsavel: filtros.p_responsavel,
+            p_tipo_operacao: filtros.p_tipo_operacao
         });
         
         const items = extrairItems(response);
@@ -456,7 +440,8 @@ async function carregarTabelaHierarquica() {
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.responsavel
+            p_responsavel: filtros.p_responsavel,
+            p_tipo_operacao: filtros.p_tipo_operacao
         });
         
         const items = extrairItems(response);
@@ -604,7 +589,7 @@ async function carregarDashboard() {
 // Adicionar listeners aos filtros
 document.addEventListener('DOMContentLoaded', function() {
     // Carrega automaticamente ao alterar filtros
-    ['anoInicio', 'mesInicio', 'anoFim', 'mesFim', 'responsavel'].forEach(id => {
+    ['ano', 'mes', 'responsavel', 'tipoOperacao'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
             element.addEventListener('change', () => {
