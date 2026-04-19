@@ -47,35 +47,7 @@ function extrairItems(response) {
     return items.map(normalizarItem);
 }
 
-function extrairStats(response) {
-    if (!response) {
-        return {};
-    }
-    if (response.total_credito !== undefined || response.total_debito !== undefined) {
-        return response;
-    }
-    const retorno = response.ret || response.RET || response.Ret;
-    if (!retorno) {
-        return response;
-    }
-    if (typeof retorno === 'string') {
-        const raw = retorno.trim();
-        try {
-            return JSON.parse(raw);
-        } catch (err) {
-            // Tentar reparar um JSON truncado
-            if (raw[0] === '{' && raw[raw.length - 1] !== '}') {
-                try {
-                    return JSON.parse(raw + '}');
-                } catch (err2) {
-                    return response;
-                }
-            }
-            return response;
-        }
-    }
-    return retorno;
-}
+
 
 // Mostrar erro
 function mostrarErro(mensagem) {
@@ -95,18 +67,22 @@ function obterFiltros() {
     const mesFim = document.getElementById('mesFim').value;
     const responsavel = document.getElementById('responsavel').value || null;
 
-    // Criar datas do primeiro e último dia do período
+    // Criar datas para período completo (para funções que ainda usam dt_ini/dt_fim)
     const dataInicio = `${anoInicio}-${mesInicio}-01`;
     const ultimoDiaMes = new Date(anoFim, mesFim, 0).getDate();
     const dataFim = `${anoFim}-${mesFim}-${ultimoDiaMes}`;
 
-    // Converter para formato DD/MM/YYYY esperado pela API Oracle
     const dt_ini = dataInicio ? formatarDataParaOracle(dataInicio) : null;
     const dt_fim = dataFim ? formatarDataParaOracle(dataFim) : null;
 
     return {
+        // Parâmetros para funções com ano/mês único
+        p_dt_ano: anoFim,
+        p_dt_mes: mesFim,
+        // Parâmetros para funções com período (dt_ini/dt_fim)
         dt_ini: dt_ini,
         dt_fim: dt_fim,
+        // Parâmetros comuns
         responsavel: responsavel
     };
 }
@@ -147,28 +123,6 @@ async function chamarAPI(endpoint, params) {
     }
 }
 
-// Carregar estatísticas resumidas
-async function carregarEstatisticas() {
-    try {
-        const filtros = obterFiltros();
-        const response = await chamarAPI('pkg_operacoes/GET_SUMMARY_STATS_F', filtros);
-        
-        const stats = extrairStats(response);
-        console.log('Parsed stats:', stats);
-        
-        document.getElementById('totalCredito').textContent = formatarMoeda(stats.total_credito);
-        document.getElementById('totalDebito').textContent = formatarMoeda(stats.total_debito);
-        
-        const saldo = stats.total_credito - stats.total_debito;
-        const saldoElement = document.getElementById('saldo');
-        saldoElement.textContent = formatarMoeda(saldo);
-        saldoElement.parentElement.classList.remove('income', 'expense');
-        saldoElement.parentElement.classList.add(saldo >= 0 ? 'income' : 'expense');
-    } catch (error) {
-        console.error('Erro ao carregar estatísticas:', error);
-    }
-}
-
 // Carregar dados por mês
 async function carregarPorMes() {
     try {
@@ -176,7 +130,11 @@ async function carregarPorMes() {
         loader.style.display = 'flex';
         
         const filtros = obterFiltros();
-        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', filtros);
+        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', {
+            p_dt_ano: filtros.p_dt_ano,
+            p_dt_mes: filtros.p_dt_mes,
+            p_responsavel: filtros.responsavel
+        });
         
         const items = extrairItems(response);
         
@@ -270,7 +228,11 @@ async function carregarPorCategoria() {
         loader.style.display = 'flex';
         
         const filtros = obterFiltros();
-        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_CATEGORY_P', filtros);
+        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_CATEGORY_P', {
+            p_dt_ano: filtros.p_dt_ano,
+            p_dt_mes: filtros.p_dt_mes,
+            p_responsavel: filtros.responsavel
+        });
         
         const items = extrairItems(response);
         
@@ -352,7 +314,9 @@ async function carregarTopCategorias() {
 
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_TOP_CATEGORIES_P', {
-            ...filtros,
+            p_dt_ano: filtros.p_dt_ano,
+            p_dt_mes: filtros.p_dt_mes,
+            p_responsavel: filtros.responsavel,
             p_limit: 10
         });
 
@@ -409,11 +373,14 @@ async function carregarChartCredito() {
         loader.style.display = 'flex';
         
         const filtros = obterFiltros();
-        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', filtros);
+        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', {
+            p_dt_ano: filtros.p_dt_ano,
+            p_dt_mes: filtros.p_dt_mes,
+            p_responsavel: filtros.responsavel
+        });
         
         const items = extrairItems(response);
         
-        // Filtrar apenas CRÉDITO
         const mesesMap = {};
         items.forEach(item => {
             if (item.tipo_operacao === 'CRÉDITO' || item.tipo_operacao === 'CREDITO' || item.tipo_operacao === 'Crédito') {
@@ -486,7 +453,11 @@ async function carregarTabelaHierarquica() {
         wrapper.style.display = 'none';
 
         const filtros = obterFiltros();
-        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', filtros);
+        const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', {
+            p_dt_ano: filtros.p_dt_ano,
+            p_dt_mes: filtros.p_dt_mes,
+            p_responsavel: filtros.responsavel
+        });
         
         const items = extrairItems(response);
         
@@ -619,7 +590,6 @@ function toggleSubcategorias(categoria) {
 async function carregarDashboard() {
     try {
         await Promise.all([
-            carregarEstatisticas(),
             carregarPorMes(),
             carregarPorCategoria(),
             carregarChartCredito(),
