@@ -11,6 +11,46 @@ function formatarMoeda(valor) {
     }).format(valor || 0);
 }
 
+function extrairItems(response) {
+    if (!response) {
+        return [];
+    }
+    if (Array.isArray(response.items)) {
+        return response.items;
+    }
+    if (Array.isArray(response.ITEMS)) {
+        return response.ITEMS;
+    }
+    if (response.items && Array.isArray(response.items.items)) {
+        return response.items.items;
+    }
+    if (response.items && Array.isArray(response.items.DATA)) {
+        return response.items.DATA;
+    }
+    return [];
+}
+
+function extrairStats(response) {
+    if (!response) {
+        return {};
+    }
+    if (response.total_credito !== undefined || response.total_debito !== undefined) {
+        return response;
+    }
+    const retorno = response.ret || response.RET || response.Ret;
+    if (!retorno) {
+        return response;
+    }
+    if (typeof retorno === 'string') {
+        try {
+            return JSON.parse(retorno);
+        } catch (err) {
+            return response;
+        }
+    }
+    return retorno;
+}
+
 // Mostrar erro
 function mostrarErro(mensagem) {
     const errorDiv = document.getElementById('errorMessage');
@@ -87,8 +127,8 @@ async function carregarEstatisticas() {
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_SUMMARY_STATS_F', filtros);
         
-        // A resposta já vem parseada do proxy
-        const stats = response;
+        const stats = extrairStats(response);
+        console.log('Parsed stats:', stats);
         
         document.getElementById('totalCredito').textContent = formatarMoeda(stats.total_credito);
         document.getElementById('totalDebito').textContent = formatarMoeda(stats.total_debito);
@@ -205,8 +245,7 @@ async function carregarPorCategoria() {
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_CATEGORY_P', filtros);
         
-        // Processar dados
-        const items = response.items || [];
+        const items = extrairItems(response);
         
         // Agrupar por categoria (apenas débitos)
         const categoriasMap = {};
@@ -287,7 +326,7 @@ async function carregarTopCategorias() {
             p_limit: 10
         });
 
-        const items = response.items || [];
+        const items = extrairItems(response);
         
         if (items.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma categoria encontrada</td></tr>';
@@ -336,7 +375,7 @@ async function carregarChartCredito() {
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', filtros);
         
-        const items = response.items || [];
+        const items = extrairItems(response);
         
         // Filtrar apenas CRÉDITO
         const mesesMap = {};
@@ -413,7 +452,7 @@ async function carregarTabelaHierarquica() {
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', filtros);
         
-        const items = response.items || [];
+        const items = extrairItems(response);
         
         // Agrupar por categoria, subcategoria e mês
         const dataMap = {};
