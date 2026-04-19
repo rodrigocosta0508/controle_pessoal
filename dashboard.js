@@ -3,16 +3,6 @@ let monthChart = null;
 let categoryChart = null;
 let creditChart = null;
 
-// Formato de data para API (DD/MM/YYYY)
-function formatarData(date) {
-    if (!date) return null;
-    const d = new Date(date);
-    const dia = String(d.getDate()).padStart(2, '0');
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const ano = d.getFullYear();
-    return `${dia}/${mes}/${ano}`;
-}
-
 // Formato de moeda para exibição
 function formatarMoeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -33,20 +23,38 @@ function mostrarErro(mensagem) {
 
 // Obter parâmetros dos filtros
 function obterFiltros() {
-    const dataInicio = document.getElementById('dataInicio').value;
-    const dataFim = document.getElementById('dataFim').value;
+    const anoInicio = document.getElementById('anoInicio').value;
+    const mesInicio = document.getElementById('mesInicio').value;
+    const anoFim = document.getElementById('anoFim').value;
+    const mesFim = document.getElementById('mesFim').value;
     const responsavel = document.getElementById('responsavel').value || null;
 
+    // Criar datas do primeiro e último dia do período
+    const dataInicio = `${anoInicio}-${mesInicio}-01`;
+    const ultimoDiaMes = new Date(anoFim, mesFim, 0).getDate();
+    const dataFim = `${anoFim}-${mesFim}-${ultimoDiaMes}`;
+
+    // Converter para formato DD/MM/YYYY esperado pela API Oracle
+    const dt_ini = dataInicio ? formatarDataParaOracle(dataInicio) : null;
+    const dt_fim = dataFim ? formatarDataParaOracle(dataFim) : null;
+
     return {
-        dt_ini: formatarData(dataInicio),
-        dt_fim: formatarData(dataFim),
+        dt_ini: dt_ini,
+        dt_fim: dt_fim,
         responsavel: responsavel
     };
+}
+
+// Formatar data para o formato esperado pela API Oracle (DD/MM/YYYY)
+function formatarDataParaOracle(dataISO) {
+    const [ano, mes, dia] = dataISO.split('-');
+    return `${dia}/${mes}/${ano}`;
 }
 
 // Chamar API via proxy
 async function chamarAPI(endpoint, params) {
     try {
+        console.log('Calling API:', endpoint, params);
         const response = await fetch(apiBase, {
             method: 'POST',
             headers: {
@@ -59,6 +67,7 @@ async function chamarAPI(endpoint, params) {
         });
 
         const data = await response.json();
+        console.log('API Response for', endpoint, ':', data);
         
         if (!response.ok || data.error) {
             throw new Error(data.message || data.error || 'Erro na API');
@@ -78,8 +87,8 @@ async function carregarEstatisticas() {
         const filtros = obterFiltros();
         const response = await chamarAPI('pkg_operacoes/GET_SUMMARY_STATS_F', filtros);
         
-        // A resposta é uma string JSON
-        const stats = typeof response === 'string' ? JSON.parse(response) : response;
+        // A resposta já vem parseada do proxy
+        const stats = response;
         
         document.getElementById('totalCredito').textContent = formatarMoeda(stats.total_credito);
         document.getElementById('totalDebito').textContent = formatarMoeda(stats.total_debito);
@@ -549,7 +558,7 @@ async function carregarDashboard() {
 // Adicionar listeners aos filtros
 document.addEventListener('DOMContentLoaded', function() {
     // Carrega automaticamente ao alterar filtros
-    ['dataInicio', 'dataFim', 'responsavel'].forEach(id => {
+    ['anoInicio', 'mesInicio', 'anoFim', 'mesFim', 'responsavel'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
             element.addEventListener('change', () => {

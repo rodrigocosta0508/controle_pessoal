@@ -318,12 +318,56 @@
             <h5><i class="fas fa-filter"></i> Filtros</h5>
             <div class="filter-group">
                 <div>
-                    <label for="dataInicio" class="form-label">Data Início</label>
-                    <input type="date" class="form-control" id="dataInicio">
+                    <label for="anoInicio" class="form-label">Ano Início</label>
+                    <select class="form-select" id="anoInicio">
+                        <option value="2023">2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
                 </div>
                 <div>
-                    <label for="dataFim" class="form-label">Data Fim</label>
-                    <input type="date" class="form-control" id="dataFim">
+                    <label for="mesInicio" class="form-label">Mês Início</label>
+                    <select class="form-select" id="mesInicio">
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="anoFim" class="form-label">Ano Fim</label>
+                    <select class="form-select" id="anoFim">
+                        <option value="2023">2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="mesFim" class="form-label">Mês Fim</label>
+                    <select class="form-select" id="mesFim">
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12" selected>Dezembro</option>
+                    </select>
                 </div>
                 <div>
                     <label for="responsavel" class="form-label">Responsável</label>
@@ -452,8 +496,13 @@
             const today = new Date();
             const lastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
             
-            document.getElementById('dataFim').valueAsDate = today;
-            document.getElementById('dataInicio').valueAsDate = lastYear;
+            // Set year dropdowns
+            document.getElementById('anoInicio').value = lastYear.getFullYear().toString();
+            document.getElementById('anoFim').value = today.getFullYear().toString();
+            
+            // Set month dropdowns (pad with zero)
+            document.getElementById('mesInicio').value = String(lastYear.getMonth() + 1).padStart(2, '0');
+            document.getElementById('mesFim').value = String(today.getMonth() + 1).padStart(2, '0');
             
             carregarDashboard();
         });
