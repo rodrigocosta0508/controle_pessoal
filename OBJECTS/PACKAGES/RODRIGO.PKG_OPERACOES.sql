@@ -133,10 +133,69 @@ CREATE OR REPLACE EDITIONABLE PACKAGE "RODRIGO"."PKG_OPERACOES" AS
         P_MESSAGE OUT VARCHAR2
     );
 
+    -- Dashboard Functions
+    PROCEDURE GET_OPERACOES_BY_MONTH_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    );
+
+    PROCEDURE GET_OPERACOES_BY_CATEGORY_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    );
+
+    FUNCTION GET_SUMMARY_STATS_F (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL
+    ) RETURN VARCHAR2;
+
+    PROCEDURE GET_TOP_CATEGORIES_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_LIMIT       IN NUMBER DEFAULT 10,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    );
+
+    PROCEDURE GET_OPERACOES_PERIOD_COMPARE_P (
+        P_DT_INI_1    IN VARCHAR2,
+        P_DT_FIM_1    IN VARCHAR2,
+        P_DT_INI_2    IN VARCHAR2,
+        P_DT_FIM_2    IN VARCHAR2,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    );
+
+    PROCEDURE GET_OPERACOES_MONTHLY_DETAIL_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    );
+
 END PKG_OPERACOES;
 /
 CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
 
+    
+    
     FUNCTION OPERACAO_EXISTE_F (
         P_ID IN NUMBER
     ) RETURN BOOLEAN IS
@@ -821,6 +880,307 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
         END IF;
     END CREATE_OPERACOES_LOAD_P;
 
+    -- Dashboard Functions Implementation
+    PROCEDURE GET_OPERACOES_BY_MONTH_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    ) IS
+        V_DT_INI DATE;
+        V_DT_FIM DATE;
+    BEGIN
+        IF P_DT_INI IS NOT NULL THEN
+            V_DT_INI := TO_DATE(P_DT_INI, 'DD/MM/YYYY');
+        ELSE
+            V_DT_INI := TRUNC(ADD_MONTHS(SYSDATE, -12), 'MM');
+        END IF;
+
+        IF P_DT_FIM IS NOT NULL THEN
+            V_DT_FIM := TO_DATE(P_DT_FIM, 'DD/MM/YYYY');
+        ELSE
+            V_DT_FIM := SYSDATE;
+        END IF;
+
+        OPEN P_CURSOR FOR
+            SELECT
+                TRUNC(DT_OPERACAO, 'MM') AS MES,
+                TIPO_OPERACAO,
+                SUM(VL_OPERACAO) AS TOTAL_VALOR,
+                COUNT(*) AS TOTAL_OPERACOES
+            FROM
+                DESC_OPERACOES_V
+            WHERE
+                DT_OPERACAO >= V_DT_INI
+                AND DT_OPERACAO <= V_DT_FIM
+                AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL)
+            GROUP BY
+                TRUNC(DT_OPERACAO, 'MM'),
+                TIPO_OPERACAO
+            ORDER BY
+                MES DESC, TIPO_OPERACAO;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Operações por mês listadas com sucesso.';
+    EXCEPTION
+        WHEN OTHERS THEN
+            P_STATUS := 'FALHA';
+            P_MESSAGE := 'Erro: ' || SQLERRM;
+    END GET_OPERACOES_BY_MONTH_P;
+
+    PROCEDURE GET_OPERACOES_BY_CATEGORY_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    ) IS
+        V_DT_INI DATE;
+        V_DT_FIM DATE;
+    BEGIN
+        IF P_DT_INI IS NOT NULL THEN
+            V_DT_INI := TO_DATE(P_DT_INI, 'DD/MM/YYYY');
+        ELSE
+            V_DT_INI := TRUNC(ADD_MONTHS(SYSDATE, -12), 'MM');
+        END IF;
+
+        IF P_DT_FIM IS NOT NULL THEN
+            V_DT_FIM := TO_DATE(P_DT_FIM, 'DD/MM/YYYY');
+        ELSE
+            V_DT_FIM := SYSDATE;
+        END IF;
+
+        OPEN P_CURSOR FOR
+            SELECT
+                NM_CATEGORIA,
+                TIPO_OPERACAO,
+                SUM(VL_OPERACAO) AS TOTAL_VALOR,
+                COUNT(*) AS TOTAL_OPERACOES
+            FROM
+                DESC_OPERACOES_V
+            WHERE
+                DT_OPERACAO >= V_DT_INI
+                AND DT_OPERACAO <= V_DT_FIM
+                AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL)
+            GROUP BY
+                NM_CATEGORIA,
+                TIPO_OPERACAO
+            ORDER BY
+                TOTAL_VALOR DESC;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Operações por categoria listadas com sucesso.';
+    EXCEPTION
+        WHEN OTHERS THEN
+            P_STATUS := 'FALHA';
+            P_MESSAGE := 'Erro: ' || SQLERRM;
+    END GET_OPERACOES_BY_CATEGORY_P;
+
+    FUNCTION GET_SUMMARY_STATS_F (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL
+    ) RETURN VARCHAR2 IS
+        V_DT_INI DATE;
+        V_DT_FIM DATE;
+        V_TOTAL_CREDITO NUMBER := 0;
+        V_TOTAL_DEBITO NUMBER := 0;
+        V_SALDO NUMBER := 0;
+        V_JSON VARCHAR2(4000);
+    BEGIN
+        IF P_DT_INI IS NOT NULL THEN
+            V_DT_INI := TO_DATE(P_DT_INI, 'DD/MM/YYYY');
+        ELSE
+            V_DT_INI := TRUNC(ADD_MONTHS(SYSDATE, -12), 'MM');
+        END IF;
+
+        IF P_DT_FIM IS NOT NULL THEN
+            V_DT_FIM := TO_DATE(P_DT_FIM, 'DD/MM/YYYY');
+        ELSE
+            V_DT_FIM := SYSDATE;
+        END IF;
+
+        SELECT
+            COALESCE(SUM(CASE WHEN TIPO_OPERACAO = 'CRÉDITO' THEN VL_OPERACAO ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN TIPO_OPERACAO = 'DÉBITO' THEN VL_OPERACAO ELSE 0 END), 0)
+        INTO
+            V_TOTAL_CREDITO,
+            V_TOTAL_DEBITO
+        FROM
+            DESC_OPERACOES_V
+        WHERE
+            DT_OPERACAO >= V_DT_INI
+            AND DT_OPERACAO <= V_DT_FIM
+            AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL);
+
+        V_SALDO := V_TOTAL_CREDITO - V_TOTAL_DEBITO;
+
+        V_JSON := '{"total_credito": ' || ROUND(V_TOTAL_CREDITO, 2) ||
+                  ', "total_debito": ' || ROUND(V_TOTAL_DEBITO, 2) ||
+                  ', "saldo": ' || ROUND(V_SALDO, 2) || '}';
+
+        RETURN V_JSON;
+    END GET_SUMMARY_STATS_F;
+
+    PROCEDURE GET_TOP_CATEGORIES_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_LIMIT       IN NUMBER DEFAULT 10,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    ) IS
+        V_DT_INI DATE;
+        V_DT_FIM DATE;
+    BEGIN
+        IF P_DT_INI IS NOT NULL THEN
+            V_DT_INI := TO_DATE(P_DT_INI, 'DD/MM/YYYY');
+        ELSE
+            V_DT_INI := TRUNC(ADD_MONTHS(SYSDATE, -12), 'MM');
+        END IF;
+
+        IF P_DT_FIM IS NOT NULL THEN
+            V_DT_FIM := TO_DATE(P_DT_FIM, 'DD/MM/YYYY');
+        ELSE
+            V_DT_FIM := SYSDATE;
+        END IF;
+
+        OPEN P_CURSOR FOR
+            SELECT
+                NM_CATEGORIA,
+                SUM(VL_OPERACAO) AS TOTAL_VALOR,
+                COUNT(*) AS TOTAL_OPERACOES,
+                ROUND(SUM(VL_OPERACAO) / (SELECT SUM(VL_OPERACAO) FROM DESC_OPERACOES_V 
+                     WHERE DT_OPERACAO >= V_DT_INI AND DT_OPERACAO <= V_DT_FIM 
+                     AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL)) * 100, 2) AS PERCENTUAL
+            FROM
+                DESC_OPERACOES_V
+            WHERE
+                DT_OPERACAO >= V_DT_INI
+                AND DT_OPERACAO <= V_DT_FIM
+                AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL)
+            GROUP BY
+                NM_CATEGORIA
+            ORDER BY
+                TOTAL_VALOR DESC
+            FETCH FIRST P_LIMIT ROWS ONLY;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Top categorias listadas com sucesso.';
+    EXCEPTION
+        WHEN OTHERS THEN
+            P_STATUS := 'FALHA';
+            P_MESSAGE := 'Erro: ' || SQLERRM;
+    END GET_TOP_CATEGORIES_P;
+
+    PROCEDURE GET_OPERACOES_PERIOD_COMPARE_P (
+        P_DT_INI_1    IN VARCHAR2,
+        P_DT_FIM_1    IN VARCHAR2,
+        P_DT_INI_2    IN VARCHAR2,
+        P_DT_FIM_2    IN VARCHAR2,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    ) IS
+        V_DT_INI_1 DATE;
+        V_DT_FIM_1 DATE;
+        V_DT_INI_2 DATE;
+        V_DT_FIM_2 DATE;
+    BEGIN
+        V_DT_INI_1 := TO_DATE(P_DT_INI_1, 'DD/MM/YYYY');
+        V_DT_FIM_1 := TO_DATE(P_DT_FIM_1, 'DD/MM/YYYY');
+        V_DT_INI_2 := TO_DATE(P_DT_INI_2, 'DD/MM/YYYY');
+        V_DT_FIM_2 := TO_DATE(P_DT_FIM_2, 'DD/MM/YYYY');
+
+        OPEN P_CURSOR FOR
+            SELECT
+                NM_CATEGORIA,
+                TIPO_OPERACAO,
+                SUM(CASE WHEN DT_OPERACAO BETWEEN V_DT_INI_1 AND V_DT_FIM_1 THEN VL_OPERACAO ELSE 0 END) AS VALOR_PERIODO_1,
+                SUM(CASE WHEN DT_OPERACAO BETWEEN V_DT_INI_2 AND V_DT_FIM_2 THEN VL_OPERACAO ELSE 0 END) AS VALOR_PERIODO_2,
+                ROUND(((SUM(CASE WHEN DT_OPERACAO BETWEEN V_DT_INI_2 AND V_DT_FIM_2 THEN VL_OPERACAO ELSE 0 END) -
+                        SUM(CASE WHEN DT_OPERACAO BETWEEN V_DT_INI_1 AND V_DT_FIM_1 THEN VL_OPERACAO ELSE 0 END)) /
+                       SUM(CASE WHEN DT_OPERACAO BETWEEN V_DT_INI_1 AND V_DT_FIM_1 THEN VL_OPERACAO ELSE 0 END) * 100), 2) AS VARIACAO_PERCENTUAL
+            FROM
+                DESC_OPERACOES_V
+            WHERE
+                (DT_OPERACAO BETWEEN V_DT_INI_1 AND V_DT_FIM_1 OR DT_OPERACAO BETWEEN V_DT_INI_2 AND V_DT_FIM_2)
+                AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL)
+            GROUP BY
+                NM_CATEGORIA,
+                TIPO_OPERACAO
+            ORDER BY
+                NM_CATEGORIA, TIPO_OPERACAO;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Comparação de períodos realizada com sucesso.';
+    EXCEPTION
+        WHEN OTHERS THEN
+            P_STATUS := 'FALHA';
+            P_MESSAGE := 'Erro: ' || SQLERRM;
+    END GET_OPERACOES_PERIOD_COMPARE_P;
+
+    PROCEDURE GET_OPERACOES_MONTHLY_DETAIL_P (
+        P_DT_INI      IN VARCHAR2 DEFAULT NULL,
+        P_DT_FIM      IN VARCHAR2 DEFAULT NULL,
+        P_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    ) IS
+        V_DT_INI DATE;
+        V_DT_FIM DATE;
+    BEGIN
+        IF P_DT_INI IS NOT NULL THEN
+            V_DT_INI := TO_DATE(P_DT_INI, 'DD/MM/YYYY');
+        ELSE
+            V_DT_INI := TRUNC(ADD_MONTHS(SYSDATE, -12), 'MM');
+        END IF;
+
+        IF P_DT_FIM IS NOT NULL THEN
+            V_DT_FIM := TO_DATE(P_DT_FIM, 'DD/MM/YYYY');
+        ELSE
+            V_DT_FIM := SYSDATE;
+        END IF;
+
+        OPEN P_CURSOR FOR
+            SELECT
+                NM_CATEGORIA,
+                NM_SUB_CATEGORIA,
+                TIPO_OPERACAO,
+                TRUNC(DT_OPERACAO, 'MM') AS MES,
+                SUM(VL_OPERACAO) AS TOTAL_VALOR,
+                COUNT(*) AS TOTAL_OPERACOES
+            FROM
+                DESC_OPERACOES_V
+            WHERE
+                DT_OPERACAO >= V_DT_INI
+                AND DT_OPERACAO <= V_DT_FIM
+                AND (P_RESPONSAVEL IS NULL OR TP_RESPONSAVEL = P_RESPONSAVEL)
+                AND (P_TIPO_OPERACAO IS NULL OR TIPO_OPERACAO = P_TIPO_OPERACAO)
+                AND (P_NM_USUARIO IS NULL OR NM_USUARIO = P_NM_USUARIO)
+            GROUP BY
+                NM_CATEGORIA,
+                NM_SUB_CATEGORIA,
+                TIPO_OPERACAO,
+                TRUNC(DT_OPERACAO, 'MM')
+            ORDER BY
+                NM_CATEGORIA, NM_SUB_CATEGORIA, TRUNC(DT_OPERACAO, 'MM');
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
+    EXCEPTION
+        WHEN OTHERS THEN
+            P_STATUS := 'FALHA';
+            P_MESSAGE := 'Erro: ' || SQLERRM;
+    END GET_OPERACOES_MONTHLY_DETAIL_P;
+
 END PKG_OPERACOES;
-/
 
