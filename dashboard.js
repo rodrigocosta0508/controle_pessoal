@@ -64,13 +64,11 @@ function obterFiltros() {
     const ano = document.getElementById('ano').value;
     const mes = document.getElementById('mes').value;
     const responsavel = document.getElementById('responsavel').value || null;
-    const tipoOperacao = document.getElementById('tipoOperacao').value || null;
 
     return {
         p_dt_ano: ano,
         p_dt_mes: mes,
-        p_responsavel: responsavel,
-        p_tipo_operacao: tipoOperacao
+        p_responsavel: responsavel
     };
 }
 
@@ -212,24 +210,20 @@ async function carregarPorCategoria() {
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_CATEGORY_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.p_responsavel,
-            p_tipo_operacao: filtros.p_tipo_operacao
+            p_responsavel: filtros.p_responsavel
         });
         
         const items = extrairItems(response);
         
-        // Agrupar por categoria (apenas débitos)
+        // Agrupar por categoria usando todos os tipos retornados
         const categoriasMap = {};
         items.forEach(item => {
-            const tipo = item.tipo_operacao;
-            if (tipo === 'DÉBITO' || tipo === 'DEBITO') {
-                const categoria = item.nm_categoria || item.nm_categoria || 'Sem categoria';
-                const valor = Number(item.total_valor || item.total_valor || 0);
-                if (!categoriasMap[categoria]) {
-                    categoriasMap[categoria] = 0;
-                }
-                categoriasMap[categoria] += valor;
+            const categoria = item.nm_categoria || 'Sem categoria';
+            const valor = Math.abs(Number(item.total_valor || 0));
+            if (!categoriasMap[categoria]) {
+                categoriasMap[categoria] = 0;
             }
+            categoriasMap[categoria] += valor;
         });
 
         const categorias = Object.keys(categoriasMap);
@@ -299,7 +293,6 @@ async function carregarTopCategorias() {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
             p_responsavel: filtros.p_responsavel,
-            p_tipo_operacao: filtros.p_tipo_operacao,
             p_limit: 10
         });
 
@@ -359,8 +352,7 @@ async function carregarChartCredito() {
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_BY_MONTH_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.p_responsavel,
-            p_tipo_operacao: filtros.p_tipo_operacao
+            p_responsavel: filtros.p_responsavel
         });
         
         const items = extrairItems(response);
@@ -440,8 +432,7 @@ async function carregarTabelaHierarquica() {
         const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', {
             p_dt_ano: filtros.p_dt_ano,
             p_dt_mes: filtros.p_dt_mes,
-            p_responsavel: filtros.p_responsavel,
-            p_tipo_operacao: filtros.p_tipo_operacao
+            p_responsavel: filtros.p_responsavel
         });
         
         const items = extrairItems(response);
@@ -589,7 +580,7 @@ async function carregarDashboard() {
 // Adicionar listeners aos filtros
 document.addEventListener('DOMContentLoaded', function() {
     // Carrega automaticamente ao alterar filtros
-    ['ano', 'mes', 'responsavel', 'tipoOperacao'].forEach(id => {
+    ['ano', 'mes', 'responsavel'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
             element.addEventListener('change', () => {
