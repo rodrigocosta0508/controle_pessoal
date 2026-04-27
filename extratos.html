@@ -197,6 +197,21 @@
                         <option value="">Todos</option>
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label for="selectOperadora" class="form-label">Operadora</label>
+                    <select id="selectOperadora" class="form-select">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="selectResponsavel" class="form-label">Responsável</label>
+                    <select id="selectResponsavel" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="R">Rodrigo</option>
+                        <option value="C">Cris</option>
+                        <option value="A">Ambos</option>
+                    </select>
+                </div>
                 <div class="d-flex align-items-center justify-content-end">
                     <button id="btnAtualizar" type="button" class="btn btn-primary w-100">Atualizar</button>
                 </div>
@@ -216,22 +231,19 @@
             </div>
         </div>
 
-        <div class="macro-section">
-            <h5>Visão Macro</h5>
+        <div class="chart-section">
+            <h5>Distribuição por categoria</h5>
             <div class="table-container">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Ciclo da Fatura</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="macroBody">
-                        <tr>
-                            <td colspan="2" class="text-center text-muted">Nenhum dado carregado</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <canvas id="categoriaPieChart" height="280"></canvas>
+                <div id="categoriaPieChartMessage" class="text-center text-muted mt-3">Carregando...</div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h5>Distribuição por responsável</h5>
+            <div class="table-container">
+                <canvas id="responsavelPieChart" height="280"></canvas>
+                <div id="responsavelPieChartMessage" class="text-center text-muted mt-3">Carregando...</div>
             </div>
         </div>
 
@@ -268,6 +280,8 @@
     <script>
         const apiBase = '/.netlify/functions/api-proxy';
         let fat12Chart = null;
+        let categoriaPieChart = null;
+        let responsavelPieChart = null;
 
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', {
@@ -373,13 +387,36 @@
             select.innerHTML = options.join('');
         }
 
+        async function carregarOperadoras() {
+            const response = await chamarAPI('pkg_operadoras/LISTAR_OPERADORAS_P');
+            const operadoras = extrairItems(response);
+            const select = document.getElementById('selectOperadora');
+            const options = ['<option value="">Todas</option>'];
+
+            operadoras.sort((a, b) => (a.nm_operadora || '').localeCompare(b.nm_operadora || ''));
+            operadoras.forEach(operadora => {
+                const valor = operadora.nm_operadora || operadora.nm_operadora;
+                if (valor) {
+                    options.push(`<option value="${valor}">${valor}</option>`);
+                }
+            });
+
+            select.innerHTML = options.join('');
+            // Set default to "C6"
+            select.value = 'C6';
+        }
+
         function obterFiltros() {
             const fatura = document.getElementById('selectFatura').value;
             const usuario = document.getElementById('selectUsuario').value;
+            const operadora = document.getElementById('selectOperadora').value;
+            const responsavel = document.getElementById('selectResponsavel').value;
 
             return {
                 p_desc_fatura: fatura || null,
-                p_nm_usuario: usuario || null
+                p_nm_usuario: usuario || null,
+                p_nm_operadora: operadora || null,
+                p_tp_responsavel: responsavel || null
             };
         }
 
@@ -389,7 +426,8 @@
                 const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_FATURA_P', filtros);
                 const items = extrairItems(response);
                 atualizarResumo(items, filtros);
-                atualizarVisaoMacro(items, filtros);
+                atualizarGraficoCategorias(items);
+                atualizarGraficoResponsavel(items);
                 atualizarVisaoDetalhada(items);
             } catch (error) {
                 mostrarMensagem('Não foi possível carregar os dados da fatura.');
@@ -471,22 +509,150 @@
             document.getElementById('summaryTotal').textContent = formatarMoeda(total);
         }
 
-        function atualizarVisaoMacro(items, filtros) {
-            const tbody = document.getElementById('macroBody');
-            const cycleLabel = filtros.p_desc_fatura || (items[0] && items[0].desc_fatura) || 'Fatura Atual';
-            const total = items.reduce((acc, item) => acc + Math.abs(Number(item.vl_operacao || 0)), 0);
+        function atualizarGraficoCategorias(items) {
+            const message = document.getElementById('categoriaPieChartMessage');
+            const canvas = document.getElementById('categoriaPieChart');
 
-            if (items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhum dado disponível para essa fatura.</td></tr>';
+            if (!items || items.length === 0) {
+                if (categoriaPieChart) {
+                    categoriaPieChart.destroy();
+                    categoriaPieChart = null;
+                }
+                message.textContent = 'Nenhum dado disponível para essa fatura.';
+                message.style.display = 'block';
                 return;
             }
 
-            tbody.innerHTML = `
-                <tr>
-                    <td>${cycleLabel}</td>
-                    <td class="text-end">${formatarMoeda(total)}</td>
-                </tr>
-            `;
+            const grouped = items.reduce((acc, item) => {
+                const categoria = item.nm_categoria || 'Sem categoria';
+                const valor = Math.abs(Number(item.vl_operacao || 0));
+                acc[categoria] = (acc[categoria] || 0) + valor;
+                return acc;
+            }, {});
+
+            const labels = Object.keys(grouped).sort();
+            const values = labels.map(label => grouped[label]);
+
+            if (categoriaPieChart) {
+                categoriaPieChart.destroy();
+            }
+
+            categoriaPieChart = new Chart(canvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: labels.map((_, idx) => [
+                            '#667eea', '#7b6bf0', '#8b57f5', '#a349ef', '#be3ee9', '#da30dd',
+                            '#ff6b6b', '#ff914d', '#ffd93d', '#6bc600', '#00bfa5'
+                        ][idx % 11]),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: context => {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: ${formatarMoeda(value)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            message.style.display = 'none';
+        }
+
+        function atualizarGraficoResponsavel(items) {
+            const message = document.getElementById('responsavelPieChartMessage');
+            const canvas = document.getElementById('responsavelPieChart');
+
+            if (!items || items.length === 0) {
+                if (responsavelPieChart) {
+                    responsavelPieChart.destroy();
+                    responsavelPieChart = null;
+                }
+                message.textContent = 'Nenhum dado disponível para essa fatura.';
+                message.style.display = 'block';
+                return;
+            }
+
+            const grouped = items.reduce((acc, item) => {
+                const responsavel = item.tp_responsavel || 'Sem responsável';
+                const valor = Math.abs(Number(item.vl_operacao || 0));
+                acc[responsavel] = (acc[responsavel] || 0) + valor;
+                return acc;
+            }, {});
+
+            const labels = Object.keys(grouped).sort().map(key => {
+                if (key === 'R') return 'Rodrigo';
+                if (key === 'C') return 'Cris';
+                if (key === 'A') return 'Ambos';
+                return key;
+            });
+            const values = labels.map(label => {
+                const key = label === 'Rodrigo' ? 'R' : label === 'Cris' ? 'C' : label === 'Ambos' ? 'A' : label;
+                return grouped[key];
+            });
+
+            if (responsavelPieChart) {
+                responsavelPieChart.destroy();
+            }
+
+            responsavelPieChart = new Chart(canvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: labels.map((_, idx) => [
+                            '#667eea', '#7b6bf0', '#8b57f5', '#a349ef', '#be3ee9', '#da30dd',
+                            '#ff6b6b', '#ff914d', '#ffd93d', '#6bc600', '#00bfa5'
+                        ][idx % 11]),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: context => {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: ${formatarMoeda(value)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            message.style.display = 'none';
         }
 
         function atualizarVisaoDetalhada(items) {
@@ -534,7 +700,7 @@
 
         async function inicializarPagina() {
             try {
-                await Promise.all([carregarFaturas(), carregarUsuarios()]);
+                await Promise.all([carregarFaturas(), carregarUsuarios(), carregarOperadoras()]);
                 await Promise.all([carregarDados(), carregarFaturas12Meses()]);
             } catch (error) {
                 mostrarMensagem('Erro ao carregar filtros iniciais.');
@@ -545,7 +711,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             inicializarPagina();
             document.getElementById('btnAtualizar').addEventListener('click', carregarDados);
-            ['selectFatura', 'selectUsuario'].forEach(id => {
+            ['selectFatura', 'selectUsuario', 'selectOperadora', 'selectResponsavel'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
                     element.addEventListener('change', () => {
