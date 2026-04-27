@@ -187,6 +187,13 @@ CREATE OR REPLACE EDITIONABLE PACKAGE "RODRIGO"."PKG_OPERACOES" AS
         P_MESSAGE     OUT VARCHAR2
     );
 
+    PROCEDURE GET_OPERACOES_FAT_12_MESES_P(
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT 'C6',
+        P_CURSOR       OUT SYS_REFCURSOR,
+        P_STATUS       OUT VARCHAR2,
+        P_MESSAGE      OUT VARCHAR2
+    );
+
 END PKG_OPERACOES;
 /
 CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
@@ -1123,5 +1130,80 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
             P_MESSAGE := 'Erro: ' || SQLERRM;
     END GET_OPERACOES_MONTHLY_DETAIL_P;
 
-END PKG_OPERACOES;
+    PROCEDURE GET_OPERACOES_FATURA_P(P_DESC_FATURA      IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2) AS
 
+        V_DESC_FATURA FATURAS.DESC_FATURA%TYPE;
+    BEGIN
+
+        IF P_DESC_FATURA IS NULL THEN
+            V_DESC_FATURA := PKG_FATURAS.GET_FATURA_ABERTA_F();
+        ELSE 
+            V_DESC_FATURA := P_DESC_FATURA;
+        END IF;
+        
+        OPEN P_CURSOR FOR
+            SELECT
+            O.NM_OPERADORA,
+            O.DESC_FATURA,
+            O.NM_CATEGORIA,
+            O.NM_SUB_CATEGORIA,
+            O.NM_USUARIO,
+            ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
+        FROM
+            DESC_OPERACOES_V O
+        WHERE
+                1 = 1
+            AND O.TIPO_OPERACAO = 'CRÉDITO'
+            AND O.NM_OPERADORA = 'C6'
+            AND O.DESC_FATURA = V_DESC_FATURA
+            AND (P_NM_USUARIO IS NULL OR O.NM_USUARIO = P_NM_USUARIO)
+        GROUP BY
+            O.NM_OPERADORA,
+            O.DESC_FATURA,
+            O.NM_CATEGORIA,
+            O.NM_SUB_CATEGORIA,
+            O.NM_USUARIO
+        ORDER BY
+            DESC_FATURA DESC;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
+
+    END GET_OPERACOES_FATURA_P;
+
+    PROCEDURE GET_OPERACOES_FAT_12_MESES_P(
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT 'C6',
+        P_CURSOR       OUT SYS_REFCURSOR,
+        P_STATUS       OUT VARCHAR2,
+        P_MESSAGE      OUT VARCHAR2
+    ) IS
+    BEGIN
+        OPEN P_CURSOR FOR
+            SELECT
+                O.NM_OPERADORA,
+                O.DESC_FATURA,
+                ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
+            FROM
+                DESC_OPERACOES_V O
+            JOIN FATURAS F ON F.DESC_FATURA = O.DESC_FATURA
+            WHERE
+                    1 = 1
+                AND O.TIPO_OPERACAO = 'CRÉDITO'
+                AND O.NM_OPERADORA = P_NM_OPERADORA
+                AND F.INI_FATURA >= ADD_MONTHS(SYSDATE,-12) AND F.FIM_FATURA <= ADD_MONTHS(SYSDATE,1)
+            GROUP BY
+                O.NM_OPERADORA,
+                O.DESC_FATURA
+            ORDER BY
+                DESC_FATURA;
+
+            P_STATUS := 'SUCESSO';
+            P_MESSAGE := 'Dados faturas últimos 12 meses listados com sucesso.';
+
+    END GET_OPERACOES_FAT_12_MESES_P;
+
+END PKG_OPERACOES;

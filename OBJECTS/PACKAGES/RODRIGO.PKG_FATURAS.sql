@@ -79,6 +79,10 @@ CREATE OR REPLACE EDITIONABLE PACKAGE "RODRIGO"."PKG_FATURAS" AS
         P_MESSAGE OUT VARCHAR2
     );
 
+    FUNCTION GET_FATURA_ABERTA_F (
+        P_NM_OPE IN VARCHAR2 DEFAULT 'C6'
+    ) RETURN VARCHAR2;
+
 END PKG_FATURAS;
 /
 CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_FATURAS" AS
@@ -156,10 +160,13 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_FATURAS" AS
     ) IS
     BEGIN
         OPEN P_CURSOR FOR SELECT
-                                                F.ID_FATURA,
-                                                F.DESC_FATURA
-                                            FROM
-                                                FATURAS F
+                                F.ID_FATURA,
+                                F.DESC_FATURA
+                            FROM
+                                FATURAS F 
+                            JOIN OPERADORAS O 
+                                ON O.ID_OPERADORA = F.ID_OPERADORA
+                            WHERE O.NM_OPERADORA = 'C6'
                           ORDER BY
                               F.VENCIMENTO DESC;
 
@@ -220,6 +227,24 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_FATURAS" AS
 
         RETURN V_ID;
     END GET_FATURA_F;
+
+    FUNCTION GET_FATURA_ABERTA_F (
+        P_NM_OPE IN VARCHAR2 DEFAULT 'C6'
+    ) RETURN VARCHAR2 IS
+        V_DESC_FATURA FATURAS.DESC_FATURA%TYPE;
+    BEGIN
+        
+        SELECT
+            F.DESC_FATURA
+        INTO V_DESC_FATURA
+        FROM
+            FATURAS F JOIN OPERADORAS O ON O.ID_OPERADORA = F.ID_OPERADORA
+        WHERE
+                O.NM_OPERADORA = P_NM_OPE
+            AND SYSDATE BETWEEN F.INI_FATURA AND F.FIM_FATURA;
+
+        RETURN V_DESC_FATURA;
+    END GET_FATURA_ABERTA_F;
 
     FUNCTION GET_OPERADORA_FAT_F (
         P_ID IN NUMBER
