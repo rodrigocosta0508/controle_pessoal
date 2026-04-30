@@ -115,6 +115,10 @@
             overflow-x: auto;
         }
 
+        .table-container table {
+            min-width: 1100px;
+        }
+
         .charts-row {
             display: flex;
             gap: 25px;
@@ -329,17 +333,25 @@
         <div class="detail-section">
             <h5>Visão Detalhada</h5>
             <div class="table-container">
-                <table class="table table-hover">
+                <table class="table table-hover table-striped">
                     <thead>
                         <tr>
+                            <th>ID</th>
+                            <th>ID Parcela</th>
+                            <th>Fatura</th>
+                            <th>Data</th>
+                            <th>Usuário</th>
                             <th>Categoria</th>
                             <th>Subcategoria</th>
-                            <th class="text-end">Total</th>
+                            <th>Parcela</th>
+                            <th>Total Parcelas</th>
+                            <th>Responsável</th>
+                            <th class="text-end">Valor</th>
                         </tr>
                     </thead>
                     <tbody id="detailBody">
                         <tr>
-                            <td colspan="3" class="text-center text-muted">Nenhum dado carregado</td>
+                            <td colspan="11" class="text-center text-muted">Nenhum dado carregado</td>
                         </tr>
                     </tbody>
                 </table>
@@ -499,15 +511,37 @@
                 atualizarResumo(items, filtros);
                 atualizarGraficoCategorias(items);
                 atualizarGraficoResponsavel(items);
-                atualizarVisaoDetalhada(items);
             } catch (error) {
                 mostrarMensagem('Não foi possível carregar os dados da fatura.');
                 console.error(error);
             }
         }
 
+        async function carregarDetalhesMensais() {
+            try {
+                const filtros = obterFiltros();
+                const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', {
+                    p_desc_fatura: filtros.p_desc_fatura,
+                    p_responsavel: filtros.p_tp_responsavel,
+                    p_tipo_operacao: null,
+                    p_nm_usuario: filtros.p_nm_usuario
+                });
+
+                const items = extrairItems(response);
+                atualizarVisaoDetalhada(items);
+            } catch (error) {
+                mostrarMensagem('Não foi possível carregar a visão detalhada.');
+                console.error(error);
+            }
+        }
+
+        async function atualizarPagina() {
+            await Promise.all([carregarDados(), carregarFaturas12Meses(), carregarDetalhesMensais()]);
+        }
+
         async function carregarFaturas12Meses() {
-            const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_FAT_12_MESES_P');
+            const filtros = obterFiltros();
+            const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_FAT_12_MESES_P', filtros);
             const items = extrairItems(response);
             const message = document.getElementById('fat12ChartMessage');
             const canvas = document.getElementById('fat12Chart');
@@ -746,42 +780,32 @@
 
         function atualizarVisaoDetalhada(items) {
             const tbody = document.getElementById('detailBody');
-            if (items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum dado disponível para essa fatura.</td></tr>';
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Nenhum dado disponível para essa fatura.</td></tr>';
                 return;
             }
 
-            const grouped = {};
-            items.forEach(item => {
-                const categoria = item.nm_categoria || 'Sem categoria';
-                const subcategoria = item.nm_sub_categoria || '(Sem subcategoria)';
-                const valor = Math.abs(Number(item.vl_operacao || 0));
+            const linhas = items.map(item => {
+                const data = item.dt_operacao ? new Date(item.dt_operacao) : null;
+                const dataFormatada = data && !Number.isNaN(data.getTime())
+                    ? data.toLocaleDateString('pt-BR')
+                    : (item.dt_operacao || '');
 
-                if (!grouped[categoria]) {
-                    grouped[categoria] = { total: 0, subcategorias: {} };
-                }
-                grouped[categoria].total += valor;
-                grouped[categoria].subcategorias[subcategoria] = (grouped[categoria].subcategorias[subcategoria] || 0) + valor;
-            });
-
-            const linhas = [];
-            Object.keys(grouped).sort().forEach(categoria => {
-                linhas.push(`
-                    <tr class="category-row">
-                        <td class="category-cell">${categoria}</td>
-                        <td></td>
-                        <td class="text-end">${formatarMoeda(grouped[categoria].total)}</td>
+                return `
+                    <tr>
+                        <td>${item.id_operacao || ''}</td>
+                        <td>${item.id_operacao_par || ''}</td>
+                        <td>${item.desc_fatura || ''}</td>
+                        <td>${dataFormatada}</td>
+                        <td>${item.nm_usuario || ''}</td>
+                        <td>${item.nm_categoria || ''}</td>
+                        <td>${item.nm_sub_categoria || ''}</td>
+                        <td>${item.parcela_atual || ''}</td>
+                        <td>${item.parcela_total || ''}</td>
+                        <td>${item.responsavel || ''}</td>
+                        <td class="text-end">${formatarMoeda(Math.abs(Number(item.vl_operacao || 0)))}</td>
                     </tr>
-                `);
-                Object.keys(grouped[categoria].subcategorias).sort().forEach(subcategoria => {
-                    linhas.push(`
-                        <tr>
-                            <td></td>
-                            <td class="detail-subcategory">${subcategoria}</td>
-                            <td class="text-end">${formatarMoeda(grouped[categoria].subcategorias[subcategoria])}</td>
-                        </tr>
-                    `);
-                });
+                `;
             });
 
             tbody.innerHTML = linhas.join('');
@@ -790,7 +814,7 @@
         async function inicializarPagina() {
             try {
                 await Promise.all([carregarFaturas(), carregarUsuarios(), carregarOperadoras()]);
-                await Promise.all([carregarDados(), carregarFaturas12Meses()]);
+                await atualizarPagina();
             } catch (error) {
                 mostrarMensagem('Erro ao carregar filtros iniciais.');
                 console.error(error);
@@ -799,13 +823,13 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             inicializarPagina();
-            document.getElementById('btnAtualizar').addEventListener('click', carregarDados);
+            document.getElementById('btnAtualizar').addEventListener('click', atualizarPagina);
             ['selectFatura', 'selectUsuario', 'selectOperadora', 'selectResponsavel'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
                     element.addEventListener('change', () => {
                         clearTimeout(window.extratoTimeout);
-                        window.extratoTimeout = setTimeout(carregarDados, 400);
+                        window.extratoTimeout = setTimeout(atualizarPagina, 400);
                     });
                 }
             });
