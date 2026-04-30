@@ -365,6 +365,7 @@
         let fat12Chart = null;
         let categoriaPieChart = null;
         let responsavelPieChart = null;
+        let currentDescFatura = null;
 
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', {
@@ -508,6 +509,7 @@
                 const filtros = obterFiltros();
                 const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_FATURA_P', filtros);
                 const items = extrairItems(response);
+                currentDescFatura = filtros.p_desc_fatura || (items.length ? items[0].desc_fatura || null : null);
                 atualizarResumo(items, filtros);
                 atualizarGraficoCategorias(items);
                 atualizarGraficoResponsavel(items);
@@ -521,7 +523,7 @@
             try {
                 const filtros = obterFiltros();
                 const response = await chamarAPI('pkg_operacoes/GET_OPERACOES_MONTHLY_DETAIL_P', {
-                    p_desc_fatura: filtros.p_desc_fatura,
+                    p_desc_fatura: filtros.p_desc_fatura || currentDescFatura,
                     p_responsavel: filtros.p_tp_responsavel,
                     p_tipo_operacao: null,
                     p_nm_usuario: filtros.p_nm_usuario
@@ -536,7 +538,8 @@
         }
 
         async function atualizarPagina() {
-            await Promise.all([carregarDados(), carregarFaturas12Meses(), carregarDetalhesMensais()]);
+            await carregarDados();
+            await Promise.all([carregarFaturas12Meses(), carregarDetalhesMensais()]);
         }
 
         async function carregarFaturas12Meses() {
@@ -608,7 +611,7 @@
         }
 
         function atualizarResumo(items, filtros) {
-            const cycleLabel = filtros.p_desc_fatura || 'Fatura Atual';
+            const cycleLabel = filtros.p_desc_fatura || currentDescFatura || 'Fatura Atual';
             const total = items.reduce((acc, item) => acc + Math.abs(Number(item.vl_operacao || 0)), 0);
             document.getElementById('summaryCycle').textContent = cycleLabel;
             document.getElementById('summaryTotal').textContent = formatarMoeda(total);
