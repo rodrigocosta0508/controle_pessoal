@@ -353,6 +353,7 @@
         let fat12Chart = null;
         let categoriaPieChart = null;
         let responsavelPieChart = null;
+        let currentDescFatura = null;
 
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', {
@@ -437,6 +438,7 @@
             });
 
             select.innerHTML = options.join('');
+            currentDescFatura = faturas.length ? (faturas[0].desc_fatura || null) : null;
         }
 
         async function carregarUsuarios() {
@@ -471,7 +473,6 @@
             });
 
             select.innerHTML = options.join('');
-            select.value = 'C6';
         }
 
         function obterFiltros() {
@@ -480,10 +481,11 @@
             const operadora = document.getElementById('selectOperadora').value;
             const responsavel = document.getElementById('selectResponsavel').value;
             const tipoOperacao = document.getElementById('selectTipoOperacao').value;
+            const selectedAnoMes = anoMes || currentDescFatura || null;
 
             return {
-                p_ano_mes: anoMes ? anoMes.replace('-', '') : null,
-                p_desc_fatura: anoMes || null,
+                p_ano_mes: selectedAnoMes || null,
+                p_desc_fatura: anoMes || currentDescFatura || null,
                 p_nm_usuario: usuario || null,
                 p_nm_operadora: operadora || null,
                 p_tp_responsavel: responsavel || null,
