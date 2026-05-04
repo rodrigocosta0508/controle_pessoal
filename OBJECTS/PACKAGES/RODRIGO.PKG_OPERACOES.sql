@@ -1234,12 +1234,13 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
     ) IS
     BEGIN
         OPEN P_CURSOR FOR
-            SELECT
-                O.NM_OPERADORA,
-                O.DESC_FATURA,
-                ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
-            FROM
-                DESC_OPERACOES_V O
+            WITH OPERACOES_12_MESES AS (
+                SELECT
+                    O.NM_OPERADORA,
+                    O.DESC_FATURA,
+                    ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
+                FROM
+                    DESC_OPERACOES_V O
             JOIN OPERADORAS OP ON OP.NM_OPERADORA = O.NM_OPERADORA
             JOIN FATURAS F ON F.DESC_FATURA = O.DESC_FATURA 
                 AND F.ID_OPERADORA = OP.ID_OPERADORA
@@ -1250,12 +1251,17 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND (P_NM_OPERADORA IS NULL OR P_NM_OPERADORA = O.NM_OPERADORA)
                 AND (P_NM_USUARIO IS NULL OR O.NM_USUARIO = P_NM_USUARIO)
                 AND (P_TP_RESPONSAVEL IS NULL OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL)
-
             GROUP BY
                 O.NM_OPERADORA,
                 O.DESC_FATURA
-            ORDER BY
-                DESC_FATURA;
+            )
+            SELECT 
+                NM_OPERADORA,
+                DESC_FATURA,
+                VL_OPERACAO,
+                ROUND(AVG(VL_OPERACAO) OVER ()) AS MEDIA_12_MESES
+            FROM OPERACOES_12_MESES
+            ORDER BY DESC_FATURA DESC;
 
             P_STATUS := 'SUCESSO';
             P_MESSAGE := 'Dados faturas últimos 12 meses listados com sucesso.';
@@ -1273,12 +1279,13 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
     ) IS
     BEGIN
         OPEN P_CURSOR FOR
-            SELECT
-                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM') ANO_MES,
-                ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
-            FROM
-                    DESC_OPERACOES_CRIS_V O
-            WHERE
+            WITH OPERACOES_12_MESES AS (
+                SELECT
+                    TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM') ANO_MES,
+                    ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
+                FROM
+                        DESC_OPERACOES_CRIS_V O
+                WHERE
                     1 = 1
                 AND TRUNC(O.DT_OPERACAO_UNICA) >= ADD_MONTHS(SYSDATE, -12)
                 AND LAST_DAY(O.DT_OPERACAO_UNICA) <= ADD_MONTHS(SYSDATE, 1)
@@ -1292,8 +1299,12 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                     OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL )
             GROUP BY
                 TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM')
-            ORDER BY
-                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM');
+            SELECT 
+                ANO_MES,
+                VL_OPERACAO,
+                ROUND(AVG(VL_OPERACAO) OVER ()) AS MEDIA_12_MESES
+            FROM OPERACOES_12_MESES
+            ORDER BY ANO_MES DESC;
 
             P_STATUS := 'SUCESSO';
             P_MESSAGE := 'Dados faturas últimos 12 meses listados com sucesso.';

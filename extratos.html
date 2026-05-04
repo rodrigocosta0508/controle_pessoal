@@ -562,6 +562,10 @@
             const labels = ordered.map(item => item.desc_fatura || '');
             const values = ordered.map(item => Math.abs(Number(item.vl_operacao || 0)));
 
+            // Extrair a média da resposta da API
+            const media = items.length > 0 ? Number(items[0].media_12_meses || items[0].MEDIA_12_MESES || 0) : 0;
+            const mediaValues = new Array(labels.length).fill(media);
+
             if (fat12Chart) {
                 fat12Chart.destroy();
             }
@@ -576,6 +580,16 @@
                         backgroundColor: '#667eea',
                         borderRadius: 8,
                         maxBarThickness: 40
+                    }, {
+                        label: 'Média',
+                        data: mediaValues,
+                        type: 'line',
+                        borderColor: '#ff6b6b',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 0
                     }]
                 },
                 options: {
@@ -583,11 +597,18 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top'
                         },
                         tooltip: {
                             callbacks: {
-                                label: context => formatarMoeda(context.parsed.y)
+                                label: context => {
+                                    if (context.datasetIndex === 0) {
+                                        return `Total da fatura: ${formatarMoeda(context.parsed.y)}`;
+                                    } else {
+                                        return `Média: ${formatarMoeda(context.parsed.y)}`;
+                                    }
+                                }
                             }
                         }
                     },
