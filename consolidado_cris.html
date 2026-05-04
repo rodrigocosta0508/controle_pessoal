@@ -450,7 +450,42 @@
                     return response;
                 }
                 if (response && typeof response === 'object') {
-                    return response.p_return || response.P_RETURN || response.return || response.RETURN || response.GET_FATURA_ABERTA_F || null;
+                    const candidates = [
+                        response['~ret'],
+                        response.p_return,
+                        response.P_RETURN,
+                        response.return,
+                        response.RETURN,
+                        response.GET_FATURA_ABERTA_F,
+                        response.get_fatura_aberta_f,
+                        response.p_desc_fatura,
+                        response.desc_fatura,
+                        response.P_DESC_FATURA,
+                        response.DESC_FATURA
+                    ];
+                    for (const value of candidates) {
+                        if (typeof value === 'string' && value.trim()) {
+                            return value.trim();
+                        }
+                    }
+
+                    for (const key of Object.keys(response)) {
+                        const value = response[key];
+                        if (typeof value === 'string' && value.trim()) {
+                            return value.trim();
+                        }
+                        if (Array.isArray(value) && value.length > 0) {
+                            const item = value[0];
+                            if (item && typeof item === 'object') {
+                                const rowValues = Object.values(item);
+                                for (const rowValue of rowValues) {
+                                    if (typeof rowValue === 'string' && rowValue.trim()) {
+                                        return rowValue.trim();
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 return null;
             } catch (error) {
