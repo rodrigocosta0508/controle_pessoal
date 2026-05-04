@@ -107,7 +107,9 @@
                     </div>
                     <div class="col-md-4">
                         <label for="filtroFatura" class="form-label">Descrição da Fatura</label>
-                        <input type="text" id="filtroFatura" class="form-control">
+                        <select id="filtroFatura" class="form-select">
+                            <option value="">Todas</option>
+                        </select>
                     </div>
                     <div class="col-md-4 d-flex align-items-end gap-2">
                         <button type="submit" class="btn btn-primary w-100">
@@ -279,7 +281,8 @@
             return Promise.all([
                 carregarCategorias(),
                 carregarUsuarios(),
-                carregarOperadores()
+                carregarOperadores(),
+                carregarFaturas()
             ]);
         }
 
@@ -328,6 +331,26 @@
                 operadores = data.p_cursor || [];
                 const opts = operadores.map(o => `<option value="${o.nm_operadora}" data-id="${o.id_operadora}">${o.nm_operadora}</option>`).join('');
                 document.getElementById('editarOperadora').innerHTML = '<option value="">Selecione</option>' + opts;
+            });
+        }
+
+        function carregarFaturas() {
+            return fetch(apiBase, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: 'pkg_faturas/LISTAR_FATURAS_P' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const faturas = data.p_cursor || [];
+                faturas.sort((a, b) => (a.desc_fatura || '').localeCompare(b.desc_fatura || '')).reverse();
+                const opts = ['<option value="">Todas</option>'];
+                faturas.forEach(fatura => {
+                    if (fatura.desc_fatura) {
+                        opts.push(`<option value="${fatura.desc_fatura}">${fatura.desc_fatura}</option>`);
+                    }
+                });
+                document.getElementById('filtroFatura').innerHTML = opts.join('');
             });
         }
 

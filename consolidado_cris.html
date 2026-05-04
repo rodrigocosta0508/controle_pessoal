@@ -438,7 +438,25 @@
             });
 
             select.innerHTML = options.join('');
-            currentDescFatura = faturas.length ? (faturas[0].desc_fatura || null) : null;
+
+            const faturaAberta = await carregarFaturaAberta();
+            currentDescFatura = faturaAberta || (faturas.length ? (faturas[0].desc_fatura || null) : null);
+        }
+
+        async function carregarFaturaAberta() {
+            try {
+                const response = await chamarAPI('pkg_faturas/GET_FATURA_ABERTA_F');
+                if (typeof response === 'string') {
+                    return response;
+                }
+                if (response && typeof response === 'object') {
+                    return response.p_return || response.P_RETURN || response.return || response.RETURN || response.GET_FATURA_ABERTA_F || null;
+                }
+                return null;
+            } catch (error) {
+                console.warn('Não foi possível carregar a fatura aberta:', error);
+                return null;
+            }
         }
 
         async function carregarUsuarios() {
@@ -615,9 +633,9 @@
 
         function atualizarResumo(items, filtros) {
             const cycleLabel = filtros.p_desc_fatura || 'Ano-Mês Atual';
-            const total = items.reduce((acc, item) => acc + Math.abs(Number(item.vl_operacao || 0)), 0);
+            const total = items.reduce((acc, item) => acc + Number(item.vl_operacao || 0), 0);
             document.getElementById('summaryCycle').textContent = cycleLabel;
-            document.getElementById('summaryTotal').textContent = formatarMoeda(total);
+            document.getElementById('summaryTotal').textContent = formatarMoeda(Math.abs(total));
         }
 
         function atualizarGraficoCategorias(items) {
@@ -636,7 +654,7 @@
 
             const grouped = items.reduce((acc, item) => {
                 const categoria = item.nm_categoria || 'Sem categoria';
-                const valor = Math.abs(Number(item.vl_operacao || 0));
+                const valor = Number(item.vl_operacao || 0);
                 acc[categoria] = (acc[categoria] || 0) + valor;
                 return acc;
             }, {});
@@ -712,7 +730,7 @@
 
             const grouped = items.reduce((acc, item) => {
                 const responsavel = item.tp_responsavel || 'Sem responsável';
-                const valor = Math.abs(Number(item.vl_operacao || 0));
+                const valor = Number(item.vl_operacao || 0);
                 acc[responsavel] = (acc[responsavel] || 0) + valor;
                 return acc;
             }, {});
