@@ -233,6 +233,36 @@ CREATE OR REPLACE EDITIONABLE PACKAGE "RODRIGO"."PKG_OPERACOES" AS
         P_MESSAGE      OUT VARCHAR2
     );
 
+    PROCEDURE GET_OPERACOES_CONSOLIDADO_RODRIGO_P(P_ANO_MES      IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_TP_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2);
+
+    PROCEDURE GET_OPERACOES_MONTHLY_DETAIL_RODRIGO_P (
+        P_ANO_MES      IN VARCHAR2 DEFAULT NULL,
+        P_TP_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    );
+
+    PROCEDURE GET_OPERACOES_12_MESES_RODRIGO_P (
+        P_TP_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR       OUT SYS_REFCURSOR,
+        P_STATUS       OUT VARCHAR2,
+        P_MESSAGE      OUT VARCHAR2
+    );
+
 END PKG_OPERACOES;
 /
 CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
@@ -1413,5 +1443,151 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
         P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
 
     END GET_OPERACOES_CONSOLIDADO_CRIS_P;
+
+    PROCEDURE GET_OPERACOES_12_MESES_RODRIGO_P (
+        P_TP_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR       OUT SYS_REFCURSOR,
+        P_STATUS       OUT VARCHAR2,
+        P_MESSAGE      OUT VARCHAR2
+    ) IS
+    BEGIN
+        OPEN P_CURSOR FOR
+            WITH OPERACOES_12_MESES AS (
+                SELECT
+                    TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM') ANO_MES,
+                    ABS(SUM(O.VL_OPERACAO)) VL_OPERACAO
+                FROM
+                        DESC_OPERACOES_RODRIGO_V O
+                WHERE
+                    1 = 1
+                AND TRUNC(O.DT_OPERACAO_UNICA) >= ADD_MONTHS(SYSDATE, -12)
+                AND LAST_DAY(O.DT_OPERACAO_UNICA) <= ADD_MONTHS(SYSDATE, 1)
+                AND ( P_TIPO_OPERACAO IS NULL
+                    OR O.TIPO_OPERACAO = P_TIPO_OPERACAO)
+                AND ( P_NM_OPERADORA IS NULL
+                    OR P_NM_OPERADORA = O.NM_OPERADORA )
+                AND ( P_NM_USUARIO IS NULL
+                    OR O.NM_USUARIO = P_NM_USUARIO )
+                AND ( P_TP_RESPONSAVEL IS NULL
+                    OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL )
+            GROUP BY
+                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM')
+            SELECT
+                ANO_MES,
+                VL_OPERACAO,
+                ROUND(AVG(VL_OPERACAO) OVER ()) AS MEDIA_12_MESES
+            FROM OPERACOES_12_MESES
+            ORDER BY ANO_MES DESC;
+
+            P_STATUS := 'SUCESSO';
+            P_MESSAGE := 'Dados faturas últimos 12 meses listados com sucesso.';
+
+    END GET_OPERACOES_12_MESES_RODRIGO_P;
+
+    PROCEDURE GET_OPERACOES_MONTHLY_DETAIL_RODRIGO_P (
+        P_ANO_MES      IN VARCHAR2 DEFAULT NULL,
+        P_TP_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2
+    ) AS
+
+    BEGIN
+        OPEN P_CURSOR FOR
+            SELECT
+                ID_OPERACAO,
+                ID_OPERACAO_PAR,
+                TIPO_OPERACAO,
+                DESC_FATURA,
+                DT_OPERACAO,
+                NM_USUARIO,
+                NM_CATEGORIA,
+                NM_SUB_CATEGORIA,
+                PARCELA_ATUAL,
+                PARCELA_TOTAL,
+                CASE TP_RESPONSAVEL
+                    WHEN 'C' THEN
+                        'CRIS'
+                    WHEN 'R' THEN
+                        'RODRIGO'
+                    WHEN 'A' THEN
+                        'AMBOS'
+                END RESPONSAVEL,
+                VL_OPERACAO
+            FROM
+                DESC_OPERACOES_RODRIGO_V
+            WHERE
+                ( P_ANO_MES IS NULL
+                OR TO_CHAR(DT_OPERACAO_UNICA, 'YYYY-MM') = P_ANO_MES )
+                AND ( P_TP_RESPONSAVEL IS NULL
+                    OR TP_RESPONSAVEL = P_TP_RESPONSAVEL )
+                AND ( P_TIPO_OPERACAO IS NULL
+                    OR TIPO_OPERACAO = P_TIPO_OPERACAO )
+                AND ( P_NM_USUARIO IS NULL
+                    OR NM_USUARIO = P_NM_USUARIO )
+                AND ( P_NM_OPERADORA IS NULL
+                    OR NM_OPERADORA = P_NM_OPERADORA )
+            ORDER BY
+                NM_CATEGORIA,
+                NM_SUB_CATEGORIA,
+                DT_OPERACAO DESC;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
+    EXCEPTION
+        WHEN OTHERS THEN
+            P_STATUS := 'FALHA';
+            P_MESSAGE := 'Erro: ' || SQLERRM;
+    END GET_OPERACOES_MONTHLY_DETAIL_RODRIGO_P;
+
+    PROCEDURE GET_OPERACOES_CONSOLIDADO_RODRIGO_P(P_ANO_MES      IN VARCHAR2 DEFAULT NULL,
+        P_NM_USUARIO  IN VARCHAR2 DEFAULT NULL,
+        P_TP_RESPONSAVEL IN VARCHAR2 DEFAULT NULL,
+        P_TIPO_OPERACAO IN VARCHAR2 DEFAULT NULL,
+        P_NM_OPERADORA IN VARCHAR2 DEFAULT NULL,
+        P_CURSOR      OUT SYS_REFCURSOR,
+        P_STATUS      OUT VARCHAR2,
+        P_MESSAGE     OUT VARCHAR2) AS
+
+    BEGIN
+
+        OPEN P_CURSOR FOR
+            SELECT
+                O.NM_OPERADORA,
+                O.DESC_FATURA,
+                O.NM_CATEGORIA,
+                O.NM_SUB_CATEGORIA,
+                O.NM_USUARIO,
+                O.TP_RESPONSAVEL,
+                SUM(O.VL_OPERACAO) VL_OPERACAO
+            FROM
+                DESC_OPERACOES_RODRIGO_V O
+            WHERE
+                ( P_ANO_MES IS NULL
+                OR TO_CHAR(DT_OPERACAO_UNICA, 'YYYY-MM') = P_ANO_MES )
+                AND (P_NM_OPERADORA IS NULL OR P_NM_OPERADORA = O.NM_OPERADORA)
+                AND (P_NM_USUARIO IS NULL OR O.NM_USUARIO = P_NM_USUARIO)
+                AND (P_TP_RESPONSAVEL IS NULL OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL)
+                AND (P_TIPO_OPERACAO IS NULL OR P_TIPO_OPERACAO = O.TIPO_OPERACAO)
+            GROUP BY
+                O.NM_OPERADORA,
+                O.DESC_FATURA,
+                O.NM_CATEGORIA,
+                O.NM_SUB_CATEGORIA,
+                O.NM_USUARIO,
+                O.TP_RESPONSAVEL
+            ORDER BY
+                DESC_FATURA DESC;
+
+        P_STATUS := 'SUCESSO';
+        P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
+
+    END GET_OPERACOES_CONSOLIDADO_RODRIGO_P;
 
 END PKG_OPERACOES;
