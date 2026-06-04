@@ -827,7 +827,7 @@
                         <td>${item.parcela_atual || ''}</td>
                         <td>${item.parcela_total || ''}</td>
                         <td>${item.responsavel || ''}</td>
-                        <td class="text-end">${formatarMoeda(Math.abs(Number(item.vl_operacao || 0)))}</td>
+                        <td class="text-end">${formatarMoeda(Number(item.vl_operacao || 0))}</td>
                     </tr>
                 `;
             });
