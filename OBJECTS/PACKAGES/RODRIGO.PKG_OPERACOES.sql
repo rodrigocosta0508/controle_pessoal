@@ -1328,7 +1328,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND ( P_TP_RESPONSAVEL IS NULL
                     OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL )
             GROUP BY
-                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM')
+                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM'))
             SELECT 
                 ANO_MES,
                 VL_OPERACAO,
@@ -1351,16 +1351,19 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
         P_STATUS      OUT VARCHAR2,
         P_MESSAGE     OUT VARCHAR2
     ) AS
-        
+
     BEGIN
         OPEN P_CURSOR FOR
             SELECT
                 ID_OPERACAO,
                 ID_OPERACAO_PAR,
                 TIPO_OPERACAO,
+                ID_FATURA,
                 DESC_FATURA,
                 DT_OPERACAO,
+                ID_USUARIO,
                 NM_USUARIO,
+                ID_CATEGORIA,
                 NM_CATEGORIA,
                 NM_SUB_CATEGORIA,
                 PARCELA_ATUAL,
@@ -1386,11 +1389,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND ( P_NM_USUARIO IS NULL
                     OR NM_USUARIO = P_NM_USUARIO )
                 AND ( P_NM_OPERADORA IS NULL
-                    OR NM_OPERADORA = P_NM_OPERADORA )
-            ORDER BY
-                NM_CATEGORIA,
-                NM_SUB_CATEGORIA,
-                DT_OPERACAO DESC;
+                    OR NM_OPERADORA = P_NM_OPERADORA );
 
         P_STATUS := 'SUCESSO';
         P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
@@ -1413,10 +1412,14 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
 
         OPEN P_CURSOR FOR
             SELECT
+                O.ID_OPERADORA,
                 O.NM_OPERADORA,
+                O.ID_FATURA,
                 O.DESC_FATURA,
+                O.ID_CATEGORIA,
                 O.NM_CATEGORIA,
                 O.NM_SUB_CATEGORIA,
+                O.ID_USUARIO,
                 O.NM_USUARIO,
                 O.TP_RESPONSAVEL,
                 SUM(O.VL_OPERACAO) VL_OPERACAO
@@ -1430,14 +1433,16 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND (P_TP_RESPONSAVEL IS NULL OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL)
                 AND (P_TIPO_OPERACAO IS NULL OR P_TIPO_OPERACAO = O.TIPO_OPERACAO)
             GROUP BY
+                O.ID_OPERADORA,
                 O.NM_OPERADORA,
+                O.ID_FATURA,
                 O.DESC_FATURA,
+                O.ID_CATEGORIA,
                 O.NM_CATEGORIA,
                 O.NM_SUB_CATEGORIA,
+                O.ID_USUARIO,
                 O.NM_USUARIO,
-                O.TP_RESPONSAVEL
-            ORDER BY
-                DESC_FATURA DESC;
+                O.TP_RESPONSAVEL;
 
         P_STATUS := 'SUCESSO';
         P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
@@ -1474,7 +1479,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND ( P_TP_RESPONSAVEL IS NULL
                     OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL )
             GROUP BY
-                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM')
+                TO_CHAR(O.DT_OPERACAO_UNICA,'YYYY-MM'))
             SELECT
                 ANO_MES,
                 VL_OPERACAO,
@@ -1504,9 +1509,12 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 ID_OPERACAO,
                 ID_OPERACAO_PAR,
                 TIPO_OPERACAO,
+                ID_FATURA,
                 DESC_FATURA,
                 DT_OPERACAO,
+                ID_USUARIO,
                 NM_USUARIO,
+                ID_CATEGORIA,
                 NM_CATEGORIA,
                 NM_SUB_CATEGORIA,
                 PARCELA_ATUAL,
@@ -1532,11 +1540,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND ( P_NM_USUARIO IS NULL
                     OR NM_USUARIO = P_NM_USUARIO )
                 AND ( P_NM_OPERADORA IS NULL
-                    OR NM_OPERADORA = P_NM_OPERADORA )
-            ORDER BY
-                NM_CATEGORIA,
-                NM_SUB_CATEGORIA,
-                DT_OPERACAO DESC;
+                    OR NM_OPERADORA = P_NM_OPERADORA );
 
         P_STATUS := 'SUCESSO';
         P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
@@ -1559,10 +1563,14 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
 
         OPEN P_CURSOR FOR
             SELECT
+                O.ID_OPERADORA,
                 O.NM_OPERADORA,
+                O.ID_FATURA,
                 O.DESC_FATURA,
+                O.ID_CATEGORIA,
                 O.NM_CATEGORIA,
                 O.NM_SUB_CATEGORIA,
+                O.ID_USUARIO,
                 O.NM_USUARIO,
                 O.TP_RESPONSAVEL,
                 SUM(O.VL_OPERACAO) VL_OPERACAO
@@ -1576,14 +1584,16 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 AND (P_TP_RESPONSAVEL IS NULL OR P_TP_RESPONSAVEL = O.TP_RESPONSAVEL)
                 AND (P_TIPO_OPERACAO IS NULL OR P_TIPO_OPERACAO = O.TIPO_OPERACAO)
             GROUP BY
+                O.ID_OPERADORA,
                 O.NM_OPERADORA,
+                O.ID_FATURA,
                 O.DESC_FATURA,
+                O.ID_CATEGORIA,
                 O.NM_CATEGORIA,
                 O.NM_SUB_CATEGORIA,
+                O.ID_USUARIO,
                 O.NM_USUARIO,
-                O.TP_RESPONSAVEL
-            ORDER BY
-                DESC_FATURA DESC;
+                O.TP_RESPONSAVEL;
 
         P_STATUS := 'SUCESSO';
         P_MESSAGE := 'Dados mensais detalhados listados com sucesso.';
