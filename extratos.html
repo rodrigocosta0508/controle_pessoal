@@ -173,6 +173,20 @@
             font-weight: 700;
         }
 
+        .table thead th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .table thead th.sortable:hover {
+            background: #e8ecff;
+        }
+
+        .sort-indicator {
+            margin-left: 6px;
+            font-size: 0.85rem;
+        }
+
         .category-row {
             background: #eef2ff;
         }
@@ -336,17 +350,17 @@
                 <table class="table table-hover table-striped">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>ID Parcela</th>
-                            <th>Fatura</th>
-                            <th>Data</th>
-                            <th>Usuário</th>
-                            <th>Categoria</th>
-                            <th>Subcategoria</th>
-                            <th>Parcela</th>
-                            <th>Total Parcelas</th>
-                            <th>Responsável</th>
-                            <th class="text-end">Valor</th>
+                            <th class="sortable" data-sort="id_operacao">ID <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="id_operacao_par">ID Parcela <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="desc_fatura">Fatura <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="dt_operacao">Data <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="nm_usuario">Usuário <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="nm_categoria">Categoria <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="nm_sub_categoria">Subcategoria <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="parcela_atual">Parcela <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="parcela_total">Total Parcelas <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="responsavel">Responsável <span class="sort-indicator"></span></th>
+                            <th class="sortable text-end" data-sort="vl_operacao">Valor <span class="sort-indicator"></span></th>
                         </tr>
                     </thead>
                     <tbody id="detailBody">
@@ -366,6 +380,9 @@
         let categoriaPieChart = null;
         let responsavelPieChart = null;
         let currentDescFatura = null;
+        let currentItems = [];
+        let currentSortColumn = null;
+        let currentSortDirection = null;
 
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', {
@@ -802,14 +819,52 @@
             message.style.display = 'none';
         }
 
+        function ordenarItems(items, coluna, direcao) {
+            if (!coluna || !direcao) {
+                return items;
+            }
+
+            const itemsCopy = [...items];
+            itemsCopy.sort((a, b) => {
+                let valA = a[coluna];
+                let valB = b[coluna];
+
+                // Handle null/undefined values
+                if (valA == null) valA = '';
+                if (valB == null) valB = '';
+
+                // Try to parse as numbers for numeric columns
+                if (!isNaN(valA) && !isNaN(valB) && valA !== '' && valB !== '') {
+                    valA = Number(valA);
+                    valB = Number(valB);
+                }
+
+                // Compare
+                if (valA < valB) return direcao === 'asc' ? -1 : 1;
+                if (valA > valB) return direcao === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            return itemsCopy;
+        }
+
         function atualizarVisaoDetalhada(items) {
+            currentItems = items || [];
+            renderizarTabela(currentItems);
+        }
+
+        function renderizarTabela(items) {
             const tbody = document.getElementById('detailBody');
             if (!items || items.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Nenhum dado disponível para essa fatura.</td></tr>';
                 return;
             }
 
-            const linhas = items.map(item => {
+            const itemsParaRenderizar = currentSortColumn && currentSortDirection 
+                ? ordenarItems(items, currentSortColumn, currentSortDirection)
+                : items;
+
+            const linhas = itemsParaRenderizar.map(item => {
                 const data = item.dt_operacao ? new Date(item.dt_operacao) : null;
                 const dataFormatada = data && !Number.isNaN(data.getTime())
                     ? data.toLocaleDateString('pt-BR')
@@ -835,6 +890,49 @@
             tbody.innerHTML = linhas.join('');
         }
 
+        function atualizarIndicadorSort() {
+            document.querySelectorAll('table thead th.sortable .sort-indicator').forEach(span => {
+                span.textContent = '';
+            });
+
+            if (currentSortColumn) {
+                const headerCell = document.querySelector(`table thead th[data-sort="${currentSortColumn}"]`);
+                if (headerCell) {
+                    const indicator = headerCell.querySelector('.sort-indicator');
+                    if (indicator) {
+                        indicator.textContent = currentSortDirection === 'asc' ? '▲' : '▼';
+                    }
+                }
+            }
+        }
+
+        function handleHeaderClick(event) {
+            const th = event.target.closest('th.sortable');
+            if (!th) return;
+
+            const coluna = th.getAttribute('data-sort');
+            if (!coluna) return;
+
+            if (currentSortColumn === coluna) {
+                // Toggle direction
+                if (currentSortDirection === 'asc') {
+                    currentSortDirection = 'desc';
+                } else if (currentSortDirection === 'desc') {
+                    currentSortDirection = null;
+                    currentSortColumn = null;
+                } else {
+                    currentSortDirection = 'asc';
+                }
+            } else {
+                // New column
+                currentSortColumn = coluna;
+                currentSortDirection = 'asc';
+            }
+
+            atualizarIndicadorSort();
+            renderizarTabela(currentItems);
+        }
+
         async function inicializarPagina() {
             try {
                 await Promise.all([carregarFaturas(), carregarUsuarios(), carregarOperadoras()]);
@@ -857,6 +955,7 @@
                     });
                 }
             });
+            document.querySelector('table thead').addEventListener('click', handleHeaderClick);
         });
     </script>
 </body>
