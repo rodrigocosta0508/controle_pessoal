@@ -713,7 +713,7 @@
             const total = items.reduce((acc, item) => acc + Number(item.vl_operacao || 0), 0);
             const totalToExpire = items.reduce((acc, item) => {
                 const dt = item.dt_operacao_unica ? new Date(item.dt_operacao_unica) : null;
-                if (dt instanceof Date && !Number.isNaN(dt.getTime()) && dt < new Date()) {
+                if (dt instanceof Date && !Number.isNaN(dt.getTime()) && dt > new Date()) {
                     return acc + Number(item.vl_operacao || 0);
                 }
                 return acc;
