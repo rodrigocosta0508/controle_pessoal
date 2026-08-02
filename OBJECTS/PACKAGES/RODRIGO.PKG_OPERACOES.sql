@@ -1512,6 +1512,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 ID_FATURA,
                 DESC_FATURA,
                 DT_OPERACAO,
+                DT_OPERACAO_UNICA,
                 ID_USUARIO,
                 NM_USUARIO,
                 ID_CATEGORIA,
@@ -1519,6 +1520,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 NM_SUB_CATEGORIA,
                 PARCELA_ATUAL,
                 PARCELA_TOTAL,
+                PARCELA,
                 CASE TP_RESPONSAVEL
                     WHEN 'C' THEN
                         'CRIS'

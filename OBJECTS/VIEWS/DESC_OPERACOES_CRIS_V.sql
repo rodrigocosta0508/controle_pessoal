@@ -22,6 +22,7 @@ FROM
             NM_SUB_CATEGORIA,
             PARCELA_ATUAL,
             PARCELA_TOTAL,
+            PARCELA,
             TP_RESPONSAVEL,
             CASE 
                 WHEN NM_OPERADORA = 'NUBANK' THEN VL_OPERACAO * -1

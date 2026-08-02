@@ -22,6 +22,7 @@ CREATE OR REPLACE VIEW RODRIGO.DESC_OPERACOES_RODRIGO_V AS
                 NM_SUB_CATEGORIA,
                 PARCELA_ATUAL,
                 PARCELA_TOTAL,
+                PARCELA,
                 TP_RESPONSAVEL,
                 VL_OPERACAO
             FROM
@@ -51,6 +52,7 @@ CREATE OR REPLACE VIEW RODRIGO.DESC_OPERACOES_RODRIGO_V AS
                 NM_SUB_CATEGORIA,
                 PARCELA_ATUAL,
                 PARCELA_TOTAL,
+                PARCELA,
                 TP_RESPONSAVEL,
                 ROUND((VL_OPERACAO * 0.6), 2) VL_OPERACAO
             FROM

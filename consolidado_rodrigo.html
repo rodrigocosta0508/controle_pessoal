@@ -297,6 +297,10 @@
                 <div class="summary-label">Total</div>
                 <div id="summaryTotal" class="summary-value">R$ 0,00</div>
             </div>
+            <div class="summary-card">
+                <div class="summary-label">Total to expire</div>
+                <div id="summaryToExpire" class="summary-value">R$ 0,00</div>
+            </div>
         </div>
 
         <div class="charts-row">
@@ -707,8 +711,17 @@
         function atualizarResumo(items, filtros) {
             const cycleLabel = filtros.p_desc_fatura || 'Ano-Mês Atual';
             const total = items.reduce((acc, item) => acc + Number(item.vl_operacao || 0), 0);
+            const totalToExpire = items.reduce((acc, item) => {
+                const dt = item.dt_operacao_unica ? new Date(item.dt_operacao_unica) : null;
+                if (dt instanceof Date && !Number.isNaN(dt.getTime()) && dt < new Date()) {
+                    return acc + Number(item.vl_operacao || 0);
+                }
+                return acc;
+            }, 0);
+
             document.getElementById('summaryCycle').textContent = cycleLabel;
             document.getElementById('summaryTotal').textContent = formatarMoeda(Math.abs(total));
+            document.getElementById('summaryToExpire').textContent = formatarMoeda(Math.abs(totalToExpire));
         }
 
         function atualizarGraficoCategorias(items) {
