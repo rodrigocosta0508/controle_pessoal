@@ -1165,6 +1165,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 ID_OPERACAO_PAR,
                 DESC_FATURA,
                 DT_OPERACAO,
+                DT_OPERACAO_ORI,
                 NM_USUARIO,
                 NM_CATEGORIA,
                 NM_SUB_CATEGORIA,
