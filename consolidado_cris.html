@@ -341,7 +341,7 @@
                             <th class="sortable" data-sort="id_operacao_par">ID Parcela <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="tipo_operacao">Tipo <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="desc_fatura">Fatura <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-sort="dt_operacao">Data <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="dt_operacao_ori">Data <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="nm_usuario">Usuário <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="nm_categoria">Categoria <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="nm_sub_categoria">Subcategoria <span class="sort-indicator"></span></th>
@@ -919,10 +919,10 @@
                 : items;
 
             const linhas = itemsParaRenderizar.map(item => {
-                const data = item.dt_operacao ? new Date(item.dt_operacao) : null;
+                const data = item.dt_operacao_ori ? new Date(item.dt_operacao_ori) : null;
                 const dataFormatada = data && !Number.isNaN(data.getTime())
                     ? data.toLocaleDateString('pt-BR')
-                    : (item.dt_operacao || '');
+                    : (item.dt_operacao_ori || '');
 
                 return `
                     <tr>
