@@ -352,8 +352,8 @@
                             <th class="sortable" data-sort="parcela_atual">Parcela <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="parcela_total">Total Parcelas <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="responsavel">Responsável <span class="sort-indicator"></span></th>
-                            <th class="sortable text-end" data-sort="vl_operacao">Valor <span class="sort-indicator"></span></th>
                             <th class="text-center">Ações</th>
+                            <th class="sortable text-end" data-sort="vl_operacao">Valor <span class="sort-indicator"></span></th>
                         </tr>
                     </thead>
                     <tbody id="detailBody">
@@ -400,6 +400,15 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
+                                <label for="editarResponsavel" class="form-label">Responsável</label>
+                                <select id="editarResponsavel" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                    <option value="R">RODRIGO</option>
+                                    <option value="C">CRIS</option>
+                                    <option value="A">AMBOS</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
                                 <label for="editarCategoria" class="form-label">Categoria</label>
                                 <select id="editarCategoria" class="form-select" required onchange="carregarSubcategoriasModal()">
                                     <option value="">Selecione</option>
@@ -409,15 +418,6 @@
                                 <label for="editarSubcategoria" class="form-label">Subcategoria</label>
                                 <select id="editarSubcategoria" class="form-select" required>
                                     <option value="">Selecione</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="editarResponsavel" class="form-label">Responsável</label>
-                                <select id="editarResponsavel" class="form-select" required>
-                                    <option value="">Selecione</option>
-                                    <option value="R">RODRIGO</option>
-                                    <option value="C">CRIS</option>
-                                    <option value="A">AMBOS</option>
                                 </select>
                             </div>
                             <div id="blocoEdicaoCredito" class="col-md-12 d-none">
