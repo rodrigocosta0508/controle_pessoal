@@ -403,9 +403,9 @@
                                 <label for="editarResponsavel" class="form-label">Responsável</label>
                                 <select id="editarResponsavel" class="form-select" required>
                                     <option value="">Selecione</option>
-                                    <option value="R">Rodrigo</option>
-                                    <option value="C">Cris</option>
-                                    <option value="A">Ambos</option>
+                                    <option value="R">RODRIGO</option>
+                                    <option value="C">CRIS</option>
+                                    <option value="A">AMBOS</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -422,12 +422,7 @@
                             </div>
                             <div id="blocoEdicaoCredito" class="col-md-12 d-none">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="editarOperadora" class="form-label">Operadora</label>
-                                        <select id="editarOperadora" class="form-select">
-                                            <option value="">Selecione</option>
-                                        </select>
-                                    </div>
+                                    <!-- Operadora removed from modal per request -->
                                     <div class="col-md-6">
                                         <label for="editarUsuario" class="form-label">Usuário</label>
                                         <select id="editarUsuario" class="form-select">
@@ -747,7 +742,7 @@
 
             if (op.tipo_operacao === 'CRÉDITO') {
                 document.getElementById('blocoEdicaoCredito').classList.remove('d-none');
-                document.getElementById('editarOperadora').value = op.nm_operadora || '';
+                // Operadora field removed from modal; nothing to set here.
                 document.getElementById('editarUsuario').value = op.nm_usuario || '';
                 document.getElementById('editarParcelasAtual').value = op.parcela_atual || 1;
                 document.getElementById('editarParcelasTotal').value = op.parcela_total || 1;
