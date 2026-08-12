@@ -199,6 +199,12 @@
                                 <input type="date" id="editarData" class="form-control" required>
                             </div>
                             <div class="col-md-6">
+                                <label for="editarFatura" class="form-label">Fatura</label>
+                                <select id="editarFatura" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
                                 <label for="editarResponsavel" class="form-label">Responsável</label>
                                 <select id="editarResponsavel" class="form-select" required>
                                     <option value="">Selecione</option>
@@ -266,6 +272,7 @@
         let categorias = [];
         let usuarios = [];
         let operadores = [];
+        let faturas = [];
         let selectedRows = new Set();
         let operacaoEmEdicao = null;
 
@@ -342,15 +349,29 @@
             })
             .then(res => res.json())
             .then(data => {
-                const faturas = data.p_cursor || [];
+                faturas = data.p_cursor || [];
                 faturas.sort((a, b) => (a.desc_fatura || '').localeCompare(b.desc_fatura || '')).reverse();
-                const opts = ['<option value="">Todas</option>'];
+                
+                // Populate filter dropdown
+                const filterOpts = ['<option value="">Todas</option>'];
                 faturas.forEach(fatura => {
                     if (fatura.desc_fatura) {
-                        opts.push(`<option value="${fatura.desc_fatura}">${fatura.desc_fatura}</option>`);
+                        filterOpts.push(`<option value="${fatura.desc_fatura}">${fatura.desc_fatura}</option>`);
                     }
                 });
-                document.getElementById('filtroFatura').innerHTML = opts.join('');
+                document.getElementById('filtroFatura').innerHTML = filterOpts.join('');
+                
+                // Populate modal dropdown
+                const modalOpts = ['<option value="">Selecione</option>'];
+                faturas.forEach(fatura => {
+                    if (fatura.desc_fatura && fatura.id_fatura) {
+                        modalOpts.push(`<option value="${fatura.id_fatura}">${fatura.desc_fatura}</option>`);
+                    }
+                });
+                const editarFaturaSelect = document.getElementById('editarFatura');
+                if (editarFaturaSelect) {
+                    editarFaturaSelect.innerHTML = modalOpts.join('');
+                }
             });
         }
 
@@ -580,6 +601,11 @@
             document.getElementById('editarTipo').value = op.tipo_operacao;
             document.getElementById('editarValor').value = op.vl_operacao;
             document.getElementById('editarData').value = converterDataParaInput(op.dt_operacao);
+            
+            // Look up and set fatura ID from desc_fatura
+            const fatura = faturas.find(f => f.desc_fatura === op.desc_fatura);
+            document.getElementById('editarFatura').value = fatura && fatura.id_fatura ? fatura.id_fatura : '';
+            
             document.getElementById('editarResponsavel').value = op.tp_responsavel;
             document.getElementById('editarCategoria').value = op.nm_categoria;
 
@@ -616,6 +642,8 @@
             const usuarioObj = usuarios.find(u => u.nm_usuario === usuario);
             const idUsuario = usuarioObj ? usuarioObj.id_usuario : null;
 
+            const idFatura = document.getElementById('editarFatura').value ? parseInt(document.getElementById('editarFatura').value) : null;
+            
             const body = {
                 p_id_operacao: idOp,
                 p_vl_operacao: parseFloat(document.getElementById('editarValor').value),
@@ -624,7 +652,8 @@
                 p_id_usuario: idUsuario,
                 p_tp_responsavel: document.getElementById('editarResponsavel').value,
                 p_parcela_atual: operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasAtual').value) : null,
-                p_parcela_total: operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasTotal').value) : null
+                p_parcela_total: operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasTotal').value) : null,
+                p_id_fatura: idFatura
             };
 
             document.getElementById('spinnerSalvar').classList.remove('d-none');
