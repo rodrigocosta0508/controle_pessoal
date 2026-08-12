@@ -734,7 +734,19 @@
             const fatura = faturas.find(f => f.desc_fatura === op.desc_fatura);
             document.getElementById('editarFatura').value = fatura && fatura.id_fatura ? fatura.id_fatura : '';
 
-            document.getElementById('editarResponsavel').value = op.tp_responsavel || '';
+            // Determine and set responsável: prefer tp_responsavel (R/C/A),
+            // otherwise infer from textual fields like responsavel or nm_responsavel
+            const editarRespEl = document.getElementById('editarResponsavel');
+            let tpResp = (op.tp_responsavel || '').toString().trim();
+            if (!tpResp) {
+                const respText = (op.responsavel || op.nm_responsavel || '').toString().trim().toUpperCase();
+                if (respText === 'RODRIGO' || respText === 'R') tpResp = 'R';
+                else if (respText === 'CRIS' || respText === 'C') tpResp = 'C';
+                else if (respText === 'AMBOS' || respText === 'A') tpResp = 'A';
+                else tpResp = '';
+            }
+            editarRespEl.value = tpResp;
+
             document.getElementById('editarCategoria').value = op.nm_categoria || '';
 
             carregarSubcategoriasModal();
