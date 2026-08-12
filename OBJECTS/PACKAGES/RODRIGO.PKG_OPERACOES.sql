@@ -1527,14 +1527,7 @@ CREATE OR REPLACE EDITIONABLE PACKAGE BODY "RODRIGO"."PKG_OPERACOES" AS
                 PARCELA_ATUAL,
                 PARCELA_TOTAL,
                 PARCELA,
-                CASE TP_RESPONSAVEL
-                    WHEN 'C' THEN
-                        'CRIS'
-                    WHEN 'R' THEN
-                        'RODRIGO'
-                    WHEN 'A' THEN
-                        'AMBOS'
-                END RESPONSAVEL,
+                TP_RESPONSAVEL AS RESPONSAVEL,
                 VL_OPERACAO
             FROM
                 DESC_OPERACOES_RODRIGO_V

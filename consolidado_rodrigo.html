@@ -349,8 +349,7 @@
                             <th class="sortable" data-sort="nm_usuario">Usuário <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="nm_categoria">Categoria <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="nm_sub_categoria">Subcategoria <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-sort="parcela_atual">Parcela <span class="sort-indicator"></span></th>
-                            <th class="sortable" data-sort="parcela_total">Total Parcelas <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-sort="parcela_atual">Parcelas <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="responsavel">Responsável <span class="sort-indicator"></span></th>
                             <th class="text-center">Ações</th>
                             <th class="sortable text-end" data-sort="vl_operacao">Valor <span class="sort-indicator"></span></th>
@@ -1190,7 +1189,7 @@
         function renderizarTabela(items) {
             const tbody = document.getElementById('detailBody');
             if (!items || items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Nenhum dado disponível para essa visualização.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">Nenhum dado disponível para essa visualização.</td></tr>';
                 return;
             }
 
@@ -1214,8 +1213,7 @@
                         <td>${item.nm_usuario || ''}</td>
                         <td>${item.nm_categoria || ''}</td>
                         <td>${item.nm_sub_categoria || ''}</td>
-                        <td>${item.parcela_atual || ''}</td>
-                        <td>${item.parcela_total || ''}</td>
+                        <td>${item.parcela_atual || '-'}/${item.parcela_total || '-'}</td>
                         <td>${item.responsavel || ''}</td>
                         <td class="text-center">
                             <button class="btn btn-sm btn-primary" onclick="abrirModalEdicao(${item.id_operacao})">Editar</button>
