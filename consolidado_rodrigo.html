@@ -352,15 +352,109 @@
                             <th class="sortable" data-sort="parcela_atual">Parcela <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="parcela_total">Total Parcelas <span class="sort-indicator"></span></th>
                             <th class="sortable" data-sort="responsavel">Responsável <span class="sort-indicator"></span></th>
+                            <th class="text-center">Ações</th>
                             <th class="sortable text-end" data-sort="vl_operacao">Valor <span class="sort-indicator"></span></th>
                         </tr>
                     </thead>
                     <tbody id="detailBody">
                         <tr>
-                            <td colspan="12" class="text-center text-muted">Nenhum dado carregado</td>
+                            <td colspan="13" class="text-center text-muted">Nenhum dado carregado</td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="modalEdicao" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Operação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEdicao" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editarId" class="form-label">ID (Somente Leitura)</label>
+                                <input type="text" id="editarId" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarTipo" class="form-label">Tipo (Somente Leitura)</label>
+                                <input type="text" id="editarTipo" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="editarValor" class="form-label">Valor da Operação</label>
+                                <input type="number" step="0.01" id="editarValor" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarData" class="form-label">Data da Operação</label>
+                                <input type="date" id="editarData" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarFatura" class="form-label">Fatura</label>
+                                <select id="editarFatura" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarResponsavel" class="form-label">Responsável</label>
+                                <select id="editarResponsavel" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                    <option value="R">Rodrigo</option>
+                                    <option value="C">Cris</option>
+                                    <option value="A">Ambos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarCategoria" class="form-label">Categoria</label>
+                                <select id="editarCategoria" class="form-select" required onchange="carregarSubcategoriasModal()">
+                                    <option value="">Selecione</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editarSubcategoria" class="form-label">Subcategoria</label>
+                                <select id="editarSubcategoria" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                </select>
+                            </div>
+                            <div id="blocoEdicaoCredito" class="col-md-12 d-none">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="editarOperadora" class="form-label">Operadora</label>
+                                        <select id="editarOperadora" class="form-select">
+                                            <option value="">Selecione</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editarUsuario" class="form-label">Usuário</label>
+                                        <select id="editarUsuario" class="form-select">
+                                            <option value="">Selecione</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editarParcelasAtual" class="form-label">Parcela Atual</label>
+                                        <input type="number" id="editarParcelasAtual" class="form-control" min="1">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editarParcelasTotal" class="form-label">Total de Parcelas</label>
+                                        <input type="number" id="editarParcelasTotal" class="form-control" min="1">
+                                    </div>
+                                </div>
+                                <div id="msgEdicao" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="salvarEdicao()">
+                        <span id="spinnerSalvar" class="spinner-border spinner-border-sm d-none me-2"></span>
+                        <span id="btnSalvarTexto">Salvar Alterações</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -375,6 +469,12 @@
         let currentItems = [];
         let currentSortColumn = null;
         let currentSortDirection = null;
+        // Globals for modal editing
+        let categorias = [];
+        let usuarios = [];
+        let operadoras = [];
+        let faturas = [];
+        let operacaoEmEdicao = null;
 
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', {
@@ -446,7 +546,9 @@
 
         async function carregarFaturas() {
             const response = await chamarAPI('pkg_faturas/LISTAR_FATURAS_P');
-            const faturas = extrairItens(response);
+            const lista = extrairItens(response);
+            // store globally
+            faturas = lista || [];
             const select = document.getElementById('selectAnoMes');
             const options = ['<option value="">Ano-Mês Atual</option>'];
 
@@ -459,6 +561,18 @@
             });
 
             select.innerHTML = options.join('');
+
+            // populate modal select if present
+            const editarFaturaSelect = document.getElementById('editarFatura');
+            if (editarFaturaSelect) {
+                const modalOpts = ['<option value="">Selecione</option>'];
+                faturas.forEach(fatura => {
+                    if (fatura.desc_fatura && fatura.id_fatura) {
+                        modalOpts.push(`<option value="${fatura.id_fatura}">${fatura.desc_fatura}</option>`);
+                    }
+                });
+                editarFaturaSelect.innerHTML = modalOpts.join('');
+            }
 
             const faturaAberta = await carregarFaturaAberta();
             currentDescFatura = faturaAberta || (faturas.length ? (faturas[0].desc_fatura || null) : null);
@@ -517,7 +631,8 @@
 
         async function carregarUsuarios() {
             const response = await chamarAPI('pkg_usuarios/LISTAR_USUARIOS_P');
-            const usuarios = extrairItens(response);
+            const lista = extrairItens(response);
+            usuarios = lista || [];
             const select = document.getElementById('selectUsuario');
             const options = ['<option value="">Todos</option>'];
 
@@ -530,11 +645,19 @@
             });
 
             select.innerHTML = options.join('');
+
+            // populate modal user select if present
+            const editarUsuarioSelect = document.getElementById('editarUsuario');
+            if (editarUsuarioSelect) {
+                const opts = usuarios.map(u => `<option value="${u.nm_usuario}" data-id="${u.id_usuario}">${u.nm_usuario}</option>`).join('');
+                editarUsuarioSelect.innerHTML = '<option value="">Selecione</option>' + opts;
+            }
         }
 
         async function carregarOperadoras() {
             const response = await chamarAPI('pkg_operadoras/LISTAR_OPERADORAS_P');
-            const operadoras = extrairItens(response);
+            const lista = extrairItens(response);
+            operadoras = lista || [];
             const select = document.getElementById('selectOperadora');
             const options = ['<option value="">Todas</option>'];
 
@@ -547,6 +670,153 @@
             });
 
             select.innerHTML = options.join('');
+
+            // populate modal operadora select if present
+            const editarOperadoraSelect = document.getElementById('editarOperadora');
+            if (editarOperadoraSelect) {
+                const opts = operadoras.map(o => `<option value="${o.nm_operadora}" data-id="${o.id_operadora}">${o.nm_operadora}</option>`).join('');
+                editarOperadoraSelect.innerHTML = '<option value="">Selecione</option>' + opts;
+            }
+        }
+
+        async function carregarCategorias() {
+            try {
+                const response = await chamarAPI('pkg_categorias/LISTAR_CATEGORIAS_P', { p_nome: '', p_sub: '' });
+                const lista = extrairItens(response);
+                categorias = lista || [];
+
+                // populate modal category select
+                const editarCategoriaSelect = document.getElementById('editarCategoria');
+                if (editarCategoriaSelect) {
+                    const unicas = [...new Set(categorias.map(c => c.nm_categoria))];
+                    editarCategoriaSelect.innerHTML = '<option value="">Selecione</option>' + unicas.map(c => `<option value="${c}">${c}</option>`).join('');
+                }
+            } catch (err) {
+                console.warn('Erro ao carregar categorias:', err);
+            }
+        }
+
+        function carregarSubcategoriasModal() {
+            const cat = document.getElementById('editarCategoria').value;
+            const subs = categorias.filter(c => c.nm_categoria === cat).map(c => c.nm_sub_categoria);
+            const editarSub = document.getElementById('editarSubcategoria');
+            if (editarSub) {
+                editarSub.innerHTML = '<option value="">Selecione</option>' + subs.map(s => `<option value="${s}">${s}</option>`).join('');
+            }
+        }
+
+        function formatarDataParaAPI(dataBR) {
+            if (!dataBR) return null;
+            const [yyyy, mm, dd] = dataBR.split('-');
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        function converterDataParaInput(dataISO) {
+            if (!dataISO) return '';
+            if (dataISO.includes('T')) {
+                const [yyyy, mm, dd] = dataISO.split('T')[0].split('-');
+                return `${yyyy}-${mm}-${dd}`;
+            } else if (dataISO.includes('/')) {
+                const [dd, mm, yyyy] = dataISO.split('/');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+            return dataISO;
+        }
+
+        function abrirModalEdicao(id) {
+            const op = (currentItems || []).find(o => o.id_operacao === id);
+            if (!op) return;
+
+            operacaoEmEdicao = op;
+
+            document.getElementById('editarId').value = op.id_operacao;
+            document.getElementById('editarTipo').value = op.tipo_operacao;
+            document.getElementById('editarValor').value = op.vl_operacao;
+            document.getElementById('editarData').value = converterDataParaInput(op.dt_operacao);
+
+            // Look up and set fatura ID from desc_fatura
+            const fatura = faturas.find(f => f.desc_fatura === op.desc_fatura);
+            document.getElementById('editarFatura').value = fatura && fatura.id_fatura ? fatura.id_fatura : '';
+
+            document.getElementById('editarResponsavel').value = op.tp_responsavel || '';
+            document.getElementById('editarCategoria').value = op.nm_categoria || '';
+
+            carregarSubcategoriasModal();
+            document.getElementById('editarSubcategoria').value = op.nm_sub_categoria || '';
+
+            if (op.tipo_operacao === 'CRÉDITO') {
+                document.getElementById('blocoEdicaoCredito').classList.remove('d-none');
+                document.getElementById('editarOperadora').value = op.nm_operadora || '';
+                document.getElementById('editarUsuario').value = op.nm_usuario || '';
+                document.getElementById('editarParcelasAtual').value = op.parcela_atual || 1;
+                document.getElementById('editarParcelasTotal').value = op.parcela_total || 1;
+            } else {
+                document.getElementById('blocoEdicaoCredito').classList.add('d-none');
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalEdicao'));
+            modal.show();
+        }
+
+        function salvarEdicao() {
+            const form = document.getElementById('formEdicao');
+            form.classList.add('was-validated');
+            if (!form.checkValidity()) return;
+
+            const idOp = parseInt(document.getElementById('editarId').value);
+            const cat = document.getElementById('editarCategoria').value;
+            const sub = document.getElementById('editarSubcategoria').value;
+
+            const catObj = categorias.find(c => c.nm_categoria === cat && c.nm_sub_categoria === sub);
+            const idCat = catObj ? catObj.id_categoria : null;
+
+            const usuario = document.getElementById('editarUsuario').value;
+            const usuarioObj = usuarios.find(u => u.nm_usuario === usuario);
+            const idUsuario = usuarioObj ? usuarioObj.id_usuario : null;
+
+            const idFatura = document.getElementById('editarFatura').value ? parseInt(document.getElementById('editarFatura').value) : null;
+            
+            const body = {
+                p_id_operacao: idOp,
+                p_vl_operacao: parseFloat(document.getElementById('editarValor').value),
+                p_dt_operacao: formatarDataParaAPI(document.getElementById('editarData').value),
+                p_id_categoria: idCat,
+                p_id_usuario: idUsuario,
+                p_tp_responsavel: document.getElementById('editarResponsavel').value,
+                p_parcela_atual: operacaoEmEdicao && operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasAtual').value) : null,
+                p_parcela_total: operacaoEmEdicao && operacaoEmEdicao.tipo_operacao === 'CRÉDITO' ? parseInt(document.getElementById('editarParcelasTotal').value) : null,
+                p_id_fatura: idFatura
+            };
+
+            document.getElementById('spinnerSalvar').classList.remove('d-none');
+            document.getElementById('btnSalvarTexto').classList.add('d-none');
+
+            fetch(apiBase, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...body, endpoint: 'pkg_operacoes/ALTERAR_OPERACOES_COMPLETO_P' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // consolidado page mostrarMensagem expects a string
+                if (data && data.p_status === 'SUCESSO') {
+                    mostrarMensagem('Operação atualizada com sucesso!');
+                    bootstrap.Modal.getInstance(document.getElementById('modalEdicao')).hide();
+                    // refresh details
+                    carregarDetalhesMensais();
+                    carregarFaturas();
+                } else {
+                    mostrarMensagem(data && (data.p_message || data.message) ? (data.p_message || data.message) : 'Erro ao atualizar operação.');
+                }
+            })
+            .catch(err => {
+                mostrarMensagem('Erro ao conectar com servidor.');
+                console.error(err);
+            })
+            .finally(() => {
+                document.getElementById('spinnerSalvar').classList.add('d-none');
+                document.getElementById('btnSalvarTexto').classList.remove('d-none');
+            });
         }
 
         function obterFiltros() {
@@ -923,7 +1193,7 @@
         function renderizarTabela(items) {
             const tbody = document.getElementById('detailBody');
             if (!items || items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">Nenhum dado disponível para essa visualização.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Nenhum dado disponível para essa visualização.</td></tr>';
                 return;
             }
 
@@ -950,6 +1220,9 @@
                         <td>${item.parcela_atual || ''}</td>
                         <td>${item.parcela_total || ''}</td>
                         <td>${item.responsavel || ''}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-primary" onclick="abrirModalEdicao(${item.id_operacao})">Editar</button>
+                        </td>
                         <td class="text-end">${formatarMoeda(Number(item.vl_operacao || 0))}</td>
                     </tr>
                 `;
@@ -1003,7 +1276,7 @@
 
         async function inicializarPagina() {
             try {
-                await Promise.all([carregarFaturas(), carregarUsuarios(), carregarOperadoras()]);
+                await Promise.all([carregarFaturas(), carregarUsuarios(), carregarOperadoras(), carregarCategorias()]);
                 await atualizarPagina();
             } catch (error) {
                 mostrarMensagem('Erro ao carregar filtros iniciais.');
