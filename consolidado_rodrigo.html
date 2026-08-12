@@ -734,7 +734,7 @@
             const fatura = faturas.find(f => f.desc_fatura === op.desc_fatura);
             document.getElementById('editarFatura').value = fatura && fatura.id_fatura ? fatura.id_fatura : '';
 
-            document.getElementById('editarResponsavel').value = op.tp_responsavel;
+            document.getElementById('editarResponsavel').value = op.responsavel;
 
             document.getElementById('editarCategoria').value = op.nm_categoria || '';
 
